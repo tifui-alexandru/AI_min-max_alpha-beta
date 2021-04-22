@@ -31,17 +31,52 @@ class Joc:
 
     directions = [(-1, 0, 'N'), (1, 0, 'S'), (0, -1, 'V'), (0, 1, 'E')]
  
-    def __init__(self, k, harta, k_jucatori = (0, 0), prot_jucatori = (0, 0)):
+    def __init__(self, k, harta, k_jucatori = {'1': 0, '2': 0}, prot_jucatori = {'1': 0, '2': 0}, bomba_inactiva = {'1': None, '2': None}):
         self.k = k
         self.harta = harta
         self.NR_LINII = len(harta)
         self.NR_COLOANE = len(harta[0])
+        self.k_jucatori = k_jucatori
+        self.prot_jucatori = prot_jucatori
+        self.bomba_inactiva = bomba_inactiva
 
-    def bombe_periculoase(self, x, y):
+    def get_bombe(self, x, y):
         # returneaza lista bombelor active care afecteaza pozitia (x, y)
+        ans = []
 
+        for linie in range(x, self.NR_LINII):
+            if self.harta[linie][y] == Joc.ZID:
+                break
+            elif self.harta[linie][y] == Joc.BOMBA:
+                ans.append((linie, y))
 
-	# tabla de exemplu este ["#","x","#","0",......]
+        for linie in range(x - 1, -1, -1):
+            if self.harta[linie][y] == Joc.ZID:
+                break
+            elif self.harta[linie][y] == Joc.BOMBA:
+                ans.append((linie, y))
+
+        for coloana in range(y, self.NR_COLOANE):
+            if self.harta[x][coloana] == Joc.ZID:
+                break
+            elif self.harta[x][coloana] == Joc.BOMBA:
+                ans.append((x, coloana))
+
+        for coloana in range(y - 1, -1, -1):
+            if self.harta[x][coloana] == Joc.ZID:
+                break
+            elif self.harta[x][coloana] == Joc.BOMBA:
+                ans.append((x, coloana))
+
+        return ans
+
+    def get_pos(self, char):
+        for linie in range(self.NR_LINII):
+            for coloana in range(self.NR_COLOANE):
+                if self.harta[linie][coloana] == char:
+                    return (linie, coloana)
+        return None
+
     def deseneaza_grid(self, castigator = None, activat_bomba = None):
         pierzator = None
         if castigator:
@@ -56,7 +91,9 @@ class Joc:
                     culoare = culori['verde']
                 elif self.harta[linie][coloana] == pierzator:
                     culoare = culori['rosu']
-        
+                elif self.harta[linie][coloana] == Joc.BOMBA or len(self.get_bombe(linie, coloana) > 0):
+                    culoare = culoari['galben']
+
         pygame.draw.rect(self.__class__.display, culoare, self.__class__.celuleGrid[linie][coloana]) #alb = (255,255,255)
 
         if self.harta[linie][coloana] == '1':
@@ -66,7 +103,10 @@ class Joc:
         elif self.harta[linie][coloana] == Joc.BOMBA:
             self.__class__.display.blit(self.__class__.img_bomba,(coloana * (self.__class__.dim_celula+1), linie * (self.__class__.dim_celula+1)))
         elif self.harta[linie][coloana] == joc.BOMBA_INACTIVA:
-            self.__class__.display.blit(self.__class__.img_bomba_inactiva,(coloana * (self.__class__.dim_celula+1), linie * (self.__class__.dim_celula+1)))
+            if (linie, coloana) == self.bomba_inactiva['1']:
+                self.__class__.display.blit(self.__class__.img_bomba_inactiva1,(coloana * (self.__class__.dim_celula+1), linie * (self.__class__.dim_celula+1)))
+            else:
+                self.__class__.display.blit(self.__class__.img_bomba_inactiva2,(coloana * (self.__class__.dim_celula+1), linie * (self.__class__.dim_celula+1)))
         elif self.harta[linie][coloana] == joc.PROTECTIE:
              self.__class__.display.blit(self.__class__.img_protectie,(coloana * (self.__class__.dim_celula+1), linie * (self.__class__.dim_celula+1)))
 
@@ -84,7 +124,8 @@ class Joc:
         cls.img_1 = pygame.image.load('jucator1.png')
         cls.img_2 = pygame.image.load('jucator2.png')
         cls.img_bomba = pygame.image.load('bomba.png')
-        cls.img_bomba_inactiva = pygame.image.load('bomba_inactiva.png')
+        cls.img_bomba_inactiva1 = pygame.image.load('bomba_inactiva1.png')
+        cls.img_bomba_inactiva2 = pygame.image.load('bomba_inactiva2.png')
         cls.img_protectie = pygame.image.load('protectie.png')
         cls.celuleGrid = []  # este lista cu patratelele din grid
         for linie in range(self.NR_LINII):
@@ -92,47 +133,111 @@ class Joc:
                 patr = pygame.Rect(coloana*(dim_celula+1), linie * (dim_celula+1), dim_celula, dim_celula)
                 cls.celuleGrid.append(patr)
 
-    def get_bombe(self, linie, coloana):
+    def final(self):
+        if self.prot_jucatori['1'] < 0 and self.prot_jucatori['2'] < 0:
+            return 'remiza'
+        elif self.prot_jucatori['1'] < 0:
+            return '2'
+        elif self.prot_jucatori['2'] < 0:
+            return '1'
+        else:
+            return None
+
+    def valid_pos(self, x, y):
+        if x < 0 or y < 0:
+            return False
+        if x > self.NR_LINII or y > self.NR_COLOANE:
+            return False
+
+        return self.harta[x][y] == Joc.LIBER or self.harta[x][y] == Joc.PROTECTIE
+
+    def muta(jucator, pozitie_noua, pune_bomba, activeaza_bomba):
+        # face mutarea data ca parametru
+
+        # validari 
+        if valid_pos(pozitie_noua[0], pozitie_noua[1]) == False:
+            return None
+
+        if pune_bomba == 1 and activeaza_bomba == 0 and bomba_inactiva[jucator]:
+            return None
+
+        if self.k_jucatori[jucator] + 1 == self.k and pune_bomba == 0:
+            return None
+
+        # am trecut de validari
+        new_harta = copy.deepcopy(self.harta)
+        new_prot_jucatori = copy.deepcopy(self.prot_jucatori)
+        new_k_jucatori = copy.deepcopy(self.k_jucator)
+        new_bomba_inactiva = copy.deepcopy(self.bomba_inactiva)
+
+        # harta
+        (x, y) = self.get_pos(jucator)
+        new_harta[x][y] = Joc.LIBER
+        new_harta[pozitie_noua[0]][pozitie_noua[1]] = jucator
+
+        # protectii
+        if self.harta[pozitie_noua[0]][pozitie_noua[1]] == Joc.PROTECTIE:
+            new_prot_jucatori[jucator] += 1
+
+        # activez bomba
+        if activeaza_bomba == 1:
+            (bx, by) = self.bomba_inactiva[jucator]
+            new_harta[bx][by] = Joc.BOMBA
+            new_bomba_inactiva[jucator] = None
+
+        # punem bomba
+        if pune_bomba == 1:
+            new_harta[x][y] = Joc.BOMBA_INACTIVA
+            new_bomba_inactiva[jucator] = (x, y)
+            new_k_jucatori[jucator] = 0
+        else:
+            new_k_jucatori[jucator] += 1
+
+        ans = Joc(self.k, new_harta, new_k_jucatori, new_prot_jucatori, new_bomba_inactiva)
+
+        # explodam bombele aferente
+        bombe = ans.get_bombe(pozitie_noua[0], pozitie_noua[1])
+        for b in bombe:
+            ans.explodeaza(b[0], b[1])
+
+        return ans
+
+    def explodeaza(self, x, y):
+        # explodeaza o bomba recursiv
+        if self.harta[x][y] != Joc.BOMBA:
+            return
+
+        self.harta[x][y] = Joc.GOL
+
+        for i in range(len(self.NR_LINII)):
+            if self.harta[i][y] == Joc.BOMBA:
+                self.explodeaza(i, y)
+            elif self.harta[i][y] == '1': 
+                self.prot_jucatori['1'] -= 1
+            elif self.harta[i][y] == '2': 
+                self.prot_jucatori['2'] -= 1 
+
+        for j in range(len(self.NR_COLOANE)):
+            if self.harta[x][j] == Joc.BOMBA:
+                self.explodeaza(x, j)
+            elif self.harta[x][j] == '1':
+                self.prot_jucatori['1'] -= 1
+            elif self.harta[x][j] == '2':
+                self.prot_jucatori['2'] -= 1
 
 
-	def final(self):
-		if not self.ultima_mutare:  # daca e inainte de prima mutare
-			return False
-		directii = [[(0, 1), (0, -1)], [(1, 1), (-1, -1)],
-                    [(1, -1), (-1, 1)], [(1, 0), (-1, 0)]]
-		um = self.ultima_mutare
-		rez = False
-		for per_dir in directii:
-			len_culoare = self.parcurgere(
-				per_dir[0]) + self.parcurgere(per_dir[1]) + 1  # +1 pt chiar ultima mutare
-			if len_culoare >= 4:
-				rez = self.matr[um[0]][um[1]]
-
-		if(rez):
-			return rez
-		elif all(self.__class__.GOL not in x for x in self.matr):
-			return 'remiza'
-		else:
-			return False
-
-	def mutari(self, jucator):
-		l_mutari = []
-		for j in range(self.__class__.NR_COLOANE):
-			last_poz = None
-			if self.matr[0][j] != self.__class__.GOL:
-				continue
-			for i in range(self.__class__.NR_LINII):
-				if self.matr[i][j] != self.__class__.GOL:
-					last_poz = (i-1, j)
-					break
-			if last_poz is None:
-				last_poz = (self.__class__.NR_LINII-1, j)
-			matr_tabla_noua = copy.deepcopy(self.matr)
-			matr_tabla_noua[last_poz[0]][last_poz[1]] = jucator
-			jn = Joc(matr_tabla_noua)
-			jn.ultima_mutare = (last_poz[0], last_poz[1])
-			l_mutari.append(jn)
-		return l_mutari
+    def mutari(self, jucator):
+        # intoarce toate mutarile valide
+        l_mutari = []
+        
+        (x, y) = get_pos(jucator)
+        for d in self.directions:
+            for pune in range(2):
+                for activeaza in range(2):
+                    joc = self.muta(jucator, (x + d[0], y + d[1]), pune, activeaza)
+                    if joc:
+                        l_mutari.append(joc)
+        return l_mutari
 
 	# linie deschisa inseamna linie pe care jucatorul mai poate forma o configuratie castigatoare
 	# practic e o linie fara simboluri ale jucatorului opus
