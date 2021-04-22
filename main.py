@@ -6,101 +6,94 @@ import sys
 
 ADANCIME_MAX = 4
 
+culori = {
+    'alb': (255, 255, 255), 
+    'gri': (192, 192, 192), 
+    'verde': (0, 255, 0), 
+    'rosu': (255, 0, 0),
+    'galben': (255, 255, 0)
+}
 
 class Joc:
-	"""
-	Clasa care defineste jocul. Se va schimba de la un joc la altul.
-	"""
+    """
+    Clasa care defineste jocul. Se va schimba de la un joc la altul.
+    """
 
     # constante
-	JMIN = None
-	JMAX = None
+    JMIN = None
+    JMAX = None
 
-	ZID = '#'
-	BOMBA = 'b'
-	PROTECTIE = 'p'
-	LIBER = ' '
+    ZID = '#'
+    BOMBA = 'b'
+    BOMBA_INACTIVA = 'B'
+    PROTECTIE = 'p'
+    LIBER = ' '
 
-	directions = [(-1, 0, 'N'), (1, 0, 'S'), (0, -1, 'V'), (0, 1, 'E')]
+    directions = [(-1, 0, 'N'), (1, 0, 'S'), (0, -1, 'V'), (0, 1, 'E')]
+ 
+    def __init__(self, k, harta, k_jucatori = (0, 0), prot_jucatori = (0, 0)):
+        self.k = k
+        self.harta = harta
+        self.NR_LINII = len(harta)
+        self.NR_COLOANE = len(harta[0])
 
-	def __init__(self, k=None, harta=None, prot_list=None):
+    def bombe_periculoase(self, x, y):
+        # returneaza lista bombelor active care afecteaza pozitia (x, y)
 
-		#creez proprietatea ultima_mutare # (l,c)
-		self.ultima_mutare = None
-
-		if matr:
-			#e data tabla, deci suntem in timpul jocului
-			self.matr = matr
-		else:
-			#nu e data tabla deci suntem la initializare
-			self.matr = [[self.__class__.GOL] * NR_COLOANE for i in range(NR_LINII)]
-
-			if NR_LINII is not None:
-				self.__class__.NR_LINII = NR_LINII
-			if NR_COLOANE is not None:
-				self.__class__.NR_COLOANE = NR_COLOANE
-
-			######## calculare scor maxim ###########
-			sc_randuri = (NR_COLOANE-3)*NR_LINII
-			sc_coloane = (NR_LINII - 3)*NR_COLOANE
-			sc_diagonale = (NR_LINII - 3) * (NR_COLOANE - 3) * 2
-			self.__class__.scor_maxim = sc_randuri + sc_coloane + sc_diagonale
 
 	# tabla de exemplu este ["#","x","#","0",......]
-	def deseneaza_grid(self, coloana_marcaj=None):
+    def deseneaza_grid(self, castigator = None, activat_bomba = None):
+        pierzator = None
+        if castigator:
+            pierzator = jucator_opus(castigator)
+        
+        culoare = culori['alb']
+        for linie in range(self.NR_LINII):
+            for coloana in range(self.NR_COLOANE):
+                if self.harta[linie][coloana] == Joc.ZID:
+                    culoare = culori['gri']
+                elif self.harta[linie][coloana] == castigator:
+                    culoare = culori['verde']
+                elif self.harta[linie][coloana] == pierzator:
+                    culoare = culori['rosu']
+        
+        pygame.draw.rect(self.__class__.display, culoare, self.__class__.celuleGrid[linie][coloana]) #alb = (255,255,255)
 
-		for ind in range(self.__class__.NR_COLOANE*self.__class__.NR_LINII):
-			linie = ind // self.__class__.NR_COLOANE  # // inseamna div
-			coloana = ind % self.__class__.NR_COLOANE
+        if self.harta[linie][coloana] == '1':
+            self.__class__.display.blit(self.__class__.img_1,(coloana * (self.__class__.dim_celula+1), linie * (self.__class__.dim_celula+1)))
+        elif self.harta[linie][coloana] == '1':
+            self.__class__.display.blit(self.__class__.img_2,(coloana * (self.__class__.dim_celula+1), linie * (self.__class__.dim_celula+1)))
+        elif self.harta[linie][coloana] == Joc.BOMBA:
+            self.__class__.display.blit(self.__class__.img_bomba,(coloana * (self.__class__.dim_celula+1), linie * (self.__class__.dim_celula+1)))
+        elif self.harta[linie][coloana] == joc.BOMBA_INACTIVA:
+            self.__class__.display.blit(self.__class__.img_bomba_inactiva,(coloana * (self.__class__.dim_celula+1), linie * (self.__class__.dim_celula+1)))
+        elif self.harta[linie][coloana] == joc.PROTECTIE:
+             self.__class__.display.blit(self.__class__.img_protectie,(coloana * (self.__class__.dim_celula+1), linie * (self.__class__.dim_celula+1)))
 
-			if coloana == coloana_marcaj:
-				#daca am o patratica selectata, o desenez cu rosu
-				culoare = (255, 255, 0)
-			else:
-				#altfel o desenez cu alb
-				culoare = (255, 255, 255)
-			pygame.draw.rect(self.__class__.display, culoare,
-			                 self.__class__.celuleGrid[ind])  # alb = (255,255,255)
-			if self.matr[linie][coloana] == 'x':
-				self.__class__.display.blit(self.__class__.x_img, (
-					coloana*(self.__class__.dim_celula+1), linie*(self.__class__.dim_celula+1)))
-			elif self.matr[linie][coloana] == '0':
-				self.__class__.display.blit(self.__class__.zero_img, (
-					coloana*(self.__class__.dim_celula+1), linie*(self.__class__.dim_celula+1)))
-		#pygame.display.flip()
-		pygame.display.update()
+		# pygame.display.flip()
+        pygame.display.update()
 
-	@classmethod
-	def jucator_opus(cls, jucator):
-		return cls.JMAX if jucator == cls.JMIN else cls.JMIN
+    @classmethod
+    def jucator_opus(cls, jucator):
+        return cls.JMAX if jucator == cls.JMIN else cls.JMIN
 
-	@classmethod
-	def initializeaza(cls, display, NR_LINII=6, NR_COLOANE=7, dim_celula=100):
-		cls.display = display
-		cls.dim_celula = dim_celula
-		cls.x_img = pygame.image.load('ics.png')
-		cls.x_img = pygame.transform.scale(cls.x_img, (dim_celula, dim_celula))
-		cls.zero_img = pygame.image.load('zero.png')
-		cls.zero_img = pygame.transform.scale(cls.zero_img, (dim_celula, dim_celula))
-		cls.celuleGrid = []  # este lista cu patratelele din grid
-		for linie in range(NR_LINII):
-			for coloana in range(NR_COLOANE):
-				patr = pygame.Rect(coloana*(dim_celula+1), linie *
-				                   (dim_celula+1), dim_celula, dim_celula)
-				cls.celuleGrid.append(patr)
+    @classmethod
+    def initializeaza(cls, display, dim_celula=100):
+        cls.display = display
+        cls.dim_celula = dim_celula
+        cls.img_1 = pygame.image.load('jucator1.png')
+        cls.img_2 = pygame.image.load('jucator2.png')
+        cls.img_bomba = pygame.image.load('bomba.png')
+        cls.img_bomba_inactiva = pygame.image.load('bomba_inactiva.png')
+        cls.img_protectie = pygame.image.load('protectie.png')
+        cls.celuleGrid = []  # este lista cu patratelele din grid
+        for linie in range(self.NR_LINII):
+            for coloana in range(self.NR_COLOANE):
+                patr = pygame.Rect(coloana*(dim_celula+1), linie * (dim_celula+1), dim_celula, dim_celula)
+                cls.celuleGrid.append(patr)
 
-	def parcurgere(self, directie):
-		um = self.ultima_mutare  # (l,c)
-		culoare = self.matr[um[0]][um[1]]
-		nr_mutari = 0
-		while True:
-			um = (um[0] + directie[0], um[1] + directie[1])
-			if not 0 <= um[0] < self.__class__.NR_LINII or not 0 <= um[1] < self.__class__.NR_COLOANE:
-				break
-			if not self.matr[um[0]][um[1]] == culoare:
-				break
-			nr_mutari += 1
-		return nr_mutari
+    def get_bombe(self, linie, coloana):
+
 
 	def final(self):
 		if not self.ultima_mutare:  # daca e inainte de prima mutare
@@ -141,13 +134,13 @@ class Joc:
 			l_mutari.append(jn)
 		return l_mutari
 
-	#linie deschisa inseamna linie pe care jucatorul mai poate forma o configuratie castigatoare
-	#practic e o linie fara simboluri ale jucatorului opus
+	# linie deschisa inseamna linie pe care jucatorul mai poate forma o configuratie castigatoare
+	# practic e o linie fara simboluri ale jucatorului opus
 	def linie_deschisa(self, lista, jucator):
 		jo = self.jucator_opus(jucator)
-		#verific daca pe linia data nu am simbolul jucatorului opus
+		# verific daca pe linia data nu am simbolul jucatorului opus
 		if not jo in lista:
-			#return 1
+			# return 1
 			return lista.count(jucator)
 		return 0
 
@@ -189,7 +182,7 @@ class Joc:
 
 	def estimeaza_scor(self, adancime):
 		t_final = self.final()
-		#if (adancime==0):
+		# if (adancime==0):
 		if t_final == self.__class__.JMAX:
 			return (self.__class__.scor_maxim+adancime)
 		elif t_final == self.__class__.JMIN:
@@ -226,16 +219,16 @@ class Stare:
 		self.tabla_joc = tabla_joc
 		self.j_curent = j_curent
 
-		#adancimea in arborele de stari
+		# adancimea in arborele de stari
 		self.adancime = adancime
 
-		#scorul starii (daca e finala) sau al celei mai bune stari-fiice (pentru jucatorul curent)
+		# scorul starii (daca e finala) sau al celei mai bune stari-fiice (pentru jucatorul curent)
 		self.scor = scor
 
-		#lista de mutari posibile din starea curenta
+		# lista de mutari posibile din starea curenta
 		self.mutari_posibile = []
 
-		#cea mai buna mutare din lista de mutari posibile pentru jucatorul curent
+		# cea mai buna mutare din lista de mutari posibile pentru jucatorul curent
 		self.stare_aleasa = None
 
 	def mutari(self):
@@ -264,17 +257,17 @@ def min_max(stare):
 		stare.scor = stare.tabla_joc.estimeaza_scor(stare.adancime)
 		return stare
 
-	#calculez toate mutarile posibile din starea curenta
+	# calculez toate mutarile posibile din starea curenta
 	stare.mutari_posibile = stare.mutari()
 
-	#aplic algoritmul minimax pe toate mutarile posibile (calculand astfel subarborii lor)
+	# aplic algoritmul minimax pe toate mutarile posibile (calculand astfel subarborii lor)
 	mutari_scor = [min_max(mutare) for mutare in stare.mutari_posibile]
 
 	if stare.j_curent == Joc.JMAX:
-		#daca jucatorul e JMAX aleg starea-fiica cu scorul maxim
+		# daca jucatorul e JMAX aleg starea-fiica cu scorul maxim
 		stare.stare_aleasa = max(mutari_scor, key=lambda x: x.scor)
 	else:
-		#daca jucatorul e JMIN aleg starea-fiica cu scorul minim
+		# daca jucatorul e JMIN aleg starea-fiica cu scorul minim
 		stare.stare_aleasa = min(mutari_scor, key=lambda x: x.scor)
 	stare.scor = stare.stare_aleasa.scor
 	return stare
@@ -294,7 +287,7 @@ def alpha_beta(alpha, beta, stare):
 		scor_curent = float('-inf')
 
 		for mutare in stare.mutari_posibile:
-			#calculeaza scorul
+			# calculeaza scorul
 			stare_noua = alpha_beta(alpha, beta, mutare)
 
 			if (scor_curent < stare_noua.scor):
@@ -350,11 +343,11 @@ class Buton:
 		self.selectat = False
 		self.fontDimensiune = fontDimensiune
 		self.culoareText = culoareText
-		#creez obiectul font
+		# creez obiectul font
 		fontObj = pygame.font.SysFont(self.font, self.fontDimensiune)
 		self.textRandat = fontObj.render(self.text, True, self.culoareText)
 		self.dreptunghi = pygame.Rect(left, top, w, h)
-		#aici centram textul
+		# aici centram textul
 		self.dreptunghiText = self.textRandat.get_rect(center=self.dreptunghi.center)
 		self.valoare = valoare
 
@@ -402,7 +395,7 @@ class GrupButoane:
 		return False
 
 	def deseneaza(self):
-		#atentie, nu face wrap
+		# atentie, nu face wrap
 		for b in self.listaButoane:
 			b.deseneaza()
 
@@ -448,9 +441,8 @@ def deseneaza_alegeri(display, tabla_curenta):
 							return btn_juc.getValoare(), btn_alg.getValoare()
 		pygame.display.update()
 
-
 def main():
-	#setari interf grafica
+	# setari interf grafica
 	pygame.init()
 	pygame.display.set_caption("Tifui Ioan Alexandru Omu' cu bombe")
 
@@ -465,35 +457,35 @@ def main():
 		k = int(temp[0])
 		harta = temp[1:]
       
-	#dimensiunea ferestrei in pixeli
+	# dimensiunea ferestrei in pixeli
 	nl = len(harta)
 	nc = len(harta[0])
 	w = 50
-	ecran = pygame.display.set_mode(
-		size=(nc*(w+1)-1, nl*(w+1)-1))  # N *w+ N-1= N*(w+1)-1
+	ecran = pygame.display.set_mode(size=(nc*(w+1)-1, nl*(w+1)-1))  # N *w+ N-1= N*(w+1)-1
 	Joc.initializeaza(ecran, NR_LINII=nl, NR_COLOANE=nc, dim_celula=w)
 
-	#initializare tabla
-	tabla_curenta = Joc(NR_LINII=6, NR_COLOANE=7)
+	# initializare tabla
+	tabla_curenta = Joc(k, harta)
 	Joc.JMIN, tip_algoritm = deseneaza_alegeri(ecran, tabla_curenta)
 	print(Joc.JMIN, tip_algoritm)
 
-	Joc.JMAX = '0' if Joc.JMIN == 'x' else 'x'
+	Joc.JMAX = '2' if Joc.JMIN == '1' else '1'
 
 	print("Tabla initiala")
 	print(str(tabla_curenta))
 
-	#creare stare initiala
-	stare_curenta = Stare(tabla_curenta, 'x', ADANCIME_MAX)
+	# creare stare initiala
+	stare_curenta = Stare(tabla_curenta, '1', ADANCIME_MAX)
 
 	tabla_curenta.deseneaza_grid()
+ 
+    
+ 
 	while True:
-
-		if (stare_curenta.j_curent == Joc.JMIN):
-
+		if (stare_curenta.j_curent == Joc.JMIN): # e omul la mutare
 			for event in pygame.event.get():
 				if event.type == pygame.QUIT:
-					#iesim din program
+					# iesim din program
 					pygame.quit()
 					sys.exit()
 				if event.type == pygame.MOUSEMOTION:
@@ -502,8 +494,7 @@ def main():
 					for np in range(len(Joc.celuleGrid)):
 						if Joc.celuleGrid[np].collidepoint(pos):
 
-							stare_curenta.tabla_joc.deseneaza_grid(
-								coloana_marcaj=np % Joc.NR_COLOANE)
+							stare_curenta.tabla_joc.deseneaza_grid(coloana_marcaj=np % Joc.NR_COLOANE)
 							break
 
 				elif event.type == pygame.MOUSEBUTTONDOWN:
@@ -513,7 +504,7 @@ def main():
 					for np in range(len(Joc.celuleGrid)):
 
 						if Joc.celuleGrid[np].collidepoint(pos):
-							#linie=np//Joc.NR_COLOANE
+							# linie=np//Joc.NR_COLOANE
 							coloana = np % Joc.NR_COLOANE
 							###############################
 
@@ -526,24 +517,24 @@ def main():
 										break
 									niv += 1
 
-								#afisarea starii jocului in urma mutarii utilizatorului
+								# afisarea starii jocului in urma mutarii utilizatorului
 								print("\nTabla dupa mutarea jucatorului")
 								print(str(stare_curenta))
 
 								stare_curenta.tabla_joc.deseneaza_grid(coloana_marcaj=coloana)
-								#testez daca jocul a ajuns intr-o stare finala
-								#si afisez un mesaj corespunzator in caz ca da
+								# testez daca jocul a ajuns intr-o stare finala
+								# si afisez un mesaj corespunzator in caz ca da
 								if (afis_daca_final(stare_curenta)):
 									break
 
-								#S-a realizat o mutare. Schimb jucatorul cu cel opus
+								# S-a realizat o mutare. Schimb jucatorul cu cel opus
 								stare_curenta.j_curent = Joc.jucator_opus(stare_curenta.j_curent)
 
-		#--------------------------------
+		# --------------------------------
 		else:  # jucatorul e JMAX (calculatorul)
-			#Mutare calculator
+			# Mutare calculator
 
-			#preiau timpul in milisecunde de dinainte de mutare
+			# preiau timpul in milisecunde de dinainte de mutare
 			t_inainte = int(round(time.time() * 1000))
 			if tip_algoritm == 'minimax':
 				stare_actualizata = min_max(stare_curenta)
@@ -553,7 +544,7 @@ def main():
 
 			print("Tabla dupa mutarea calculatorului\n"+str(stare_curenta))
 
-			#preiau timpul in milisecunde de dupa mutare
+			# preiau timpul in milisecunde de dupa mutare
 			t_dupa = int(round(time.time() * 1000))
 			print("Calculatorul a \"gandit\" timp de " +
 			      str(t_dupa-t_inainte)+" milisecunde.")
@@ -562,7 +553,7 @@ def main():
 			if (afis_daca_final(stare_curenta)):
 				break
 
-			#S-a realizat o mutare. Schimb jucatorul cu cel opus
+			# S-a realizat o mutare. Schimb jucatorul cu cel opus
 			stare_curenta.j_curent = Joc.jucator_opus(stare_curenta.j_curent)
 
 
