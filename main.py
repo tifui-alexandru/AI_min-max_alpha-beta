@@ -27,6 +27,7 @@ class Joc:
     ZID = '#'
     BOMBA = 'b'
     BOMBA_INACTIVA = 'B'
+    BOMBA_EXPLODATA = 'E'
     PROTECTIE = 'p'
     LIBER = ' '
 
@@ -105,6 +106,8 @@ class Joc:
                     culoare = culori['verde']
                 elif self.harta[linie][coloana] == pierzator:
                     culoare = culori['rosu']
+                elif self.harta[linie][coloana] == Joc.BOMBA_EXPLODATA:
+                    culoare = culori['rosu']
                 elif self.patrat_bombat(linie, coloana):
                     culoare = culori['galben']
 
@@ -119,6 +122,9 @@ class Joc:
                     self.__class__.display.blit(self.__class__.img_2,(coloana * (self.__class__.dim_celula+1), linie * (self.__class__.dim_celula+1)))
                 elif self.harta[linie][coloana] == Joc.BOMBA:
                     self.__class__.display.blit(self.__class__.img_bomba,(coloana * (self.__class__.dim_celula+1), linie * (self.__class__.dim_celula+1)))
+                elif self.harta[linie][coloana] == Joc.BOMBA_EXPLODATA:
+                    self.__class__.display.blit(self.__class__.img_bomba,(coloana * (self.__class__.dim_celula+1), linie * (self.__class__.dim_celula+1)))
+                    self.harta[linie][coloana] = Joc.LIBER
                 elif self.harta[linie][coloana] == Joc.BOMBA_INACTIVA:
                     if (linie, coloana) == self.bomba_inactiva['1']:
                         self.__class__.display.blit(self.__class__.img_bomba_inactiva1,(coloana * (self.__class__.dim_celula+1), linie * (self.__class__.dim_celula+1)))
@@ -252,7 +258,7 @@ class Joc:
         if self.harta[x][y] != Joc.BOMBA:
             return
 
-        self.harta[x][y] = Joc.LIBER
+        self.harta[x][y] = Joc.BOMBA_EXPLODATA
 
         for i in range(self.NR_LINII):
             if self.harta[i][y] == Joc.BOMBA:
@@ -615,7 +621,7 @@ def main():
 
                     if activez_bomba:
                         tabla_intermediara = copy.deepcopy(tabla_curenta)
-                        tabla_intermediara.harta[pozitie_noua[0]][pozitie_noua[1]] = Joc.BOMBA_INACTIVA
+                        tabla_intermediara.harta[pozitie_noua[0]][pozitie_noua[1]] = Joc.BOMBA
                         tabla_intermediara.deseneaza_grid()
                         print("Tabla intermediara")
                         print(str(tabla_intermediara))
