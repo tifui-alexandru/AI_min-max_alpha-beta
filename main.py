@@ -124,7 +124,8 @@ class Joc:
                     self.__class__.display.blit(self.__class__.img_bomba,(coloana * (self.__class__.dim_celula+1), linie * (self.__class__.dim_celula+1)))
                 elif self.harta[linie][coloana] == Joc.BOMBA_EXPLODATA:
                     self.__class__.display.blit(self.__class__.img_bomba,(coloana * (self.__class__.dim_celula+1), linie * (self.__class__.dim_celula+1)))
-                    self.harta[linie][coloana] = Joc.LIBER
+                    if self.final() is None:
+                        self.harta[linie][coloana] = Joc.LIBER
                 elif self.harta[linie][coloana] == Joc.BOMBA_INACTIVA:
                     if (linie, coloana) == self.bomba_inactiva['1']:
                         self.__class__.display.blit(self.__class__.img_bomba_inactiva1,(coloana * (self.__class__.dim_celula+1), linie * (self.__class__.dim_celula+1)))
