@@ -78,21 +78,34 @@ class Joc:
                     return (linie, coloana)
         return None
 
+    def patrat_bombat(self, x, y):
+        # intoarce True daca celula (x, y) este afectata de o bomba
+        # sau daca pe celula (x, y) se afla o bomba
+        for i in range(self.NR_LINII):
+            if self.harta[i][y] == Joc.BOMBA:
+                return True
+        for j in range(self.NR_COLOANE):
+            if self.harta[x][j] == Joc.BOMBA:
+                return True
+        return False
+
     def deseneaza_grid(self, castigator = None, remiza = False):
         pierzator = None
         if castigator:
             pierzator = self.jucator_opus(castigator)
         
         for linie in range(self.NR_LINII):
-            culoare = culori['alb']
             for coloana in range(self.NR_COLOANE):
+                
+                culoare = culori['alb']
+
                 if self.harta[linie][coloana] == Joc.ZID:
                     culoare = culori['gri']
                 elif self.harta[linie][coloana] == castigator:
                     culoare = culori['verde']
                 elif self.harta[linie][coloana] == pierzator:
                     culoare = culori['rosu']
-                elif self.harta[linie][coloana] == Joc.BOMBA or len(self.get_bombe(linie, coloana) > 0):
+                elif self.patrat_bombat(linie, coloana):
                     culoare = culori['galben']
 
                 if remiza and (self.harta[linie][coloana] == castigator or self.harta[linie][coloana] == pierzator):
@@ -100,19 +113,19 @@ class Joc:
 
                 pygame.draw.rect(self.__class__.display, culoare, self.__class__.celuleGrid[linie][coloana]) #alb = (255,255,255)
 
-        if self.harta[linie][coloana] == '1':
-            self.__class__.display.blit(self.__class__.img_1,(coloana * (self.__class__.dim_celula+1), linie * (self.__class__.dim_celula+1)))
-        elif self.harta[linie][coloana] == '1':
-            self.__class__.display.blit(self.__class__.img_2,(coloana * (self.__class__.dim_celula+1), linie * (self.__class__.dim_celula+1)))
-        elif self.harta[linie][coloana] == Joc.BOMBA:
-            self.__class__.display.blit(self.__class__.img_bomba,(coloana * (self.__class__.dim_celula+1), linie * (self.__class__.dim_celula+1)))
-        elif self.harta[linie][coloana] == Joc.BOMBA_INACTIVA:
-            if (linie, coloana) == self.bomba_inactiva['1']:
-                self.__class__.display.blit(self.__class__.img_bomba_inactiva1,(coloana * (self.__class__.dim_celula+1), linie * (self.__class__.dim_celula+1)))
-            else:
-                self.__class__.display.blit(self.__class__.img_bomba_inactiva2,(coloana * (self.__class__.dim_celula+1), linie * (self.__class__.dim_celula+1)))
-        elif self.harta[linie][coloana] == Joc.PROTECTIE:
-             self.__class__.display.blit(self.__class__.img_protectie,(coloana * (self.__class__.dim_celula+1), linie * (self.__class__.dim_celula+1)))
+                if self.harta[linie][coloana] == '1':
+                    self.__class__.display.blit(self.__class__.img_1,(coloana * (self.__class__.dim_celula+1), linie * (self.__class__.dim_celula+1)))
+                elif self.harta[linie][coloana] == '2':
+                    self.__class__.display.blit(self.__class__.img_2,(coloana * (self.__class__.dim_celula+1), linie * (self.__class__.dim_celula+1)))
+                elif self.harta[linie][coloana] == Joc.BOMBA:
+                    self.__class__.display.blit(self.__class__.img_bomba,(coloana * (self.__class__.dim_celula+1), linie * (self.__class__.dim_celula+1)))
+                elif self.harta[linie][coloana] == Joc.BOMBA_INACTIVA:
+                    if (linie, coloana) == self.bomba_inactiva['1']:
+                        self.__class__.display.blit(self.__class__.img_bomba_inactiva1,(coloana * (self.__class__.dim_celula+1), linie * (self.__class__.dim_celula+1)))
+                    else:
+                        self.__class__.display.blit(self.__class__.img_bomba_inactiva2,(coloana * (self.__class__.dim_celula+1), linie * (self.__class__.dim_celula+1)))
+                elif self.harta[linie][coloana] == Joc.PROTECTIE:
+                    self.__class__.display.blit(self.__class__.img_protectie,(coloana * (self.__class__.dim_celula+1), linie * (self.__class__.dim_celula+1)))
 
 		# pygame.display.flip()
         pygame.display.update()
@@ -131,11 +144,11 @@ class Joc:
         cls.img_bomba_inactiva1 = pygame.image.load('bomba_inactiva1.png')
         cls.img_bomba_inactiva2 = pygame.image.load('bomba_inactiva2.png')
         cls.img_protectie = pygame.image.load('protectie.png')
-        cls.celuleGrid = []  # este lista cu patratelele din grid
+        cls.celuleGrid = [[None for _ in range(NR_COLOANE)] for _ in range(NR_LINII)]  # este lista cu patratelele din grid
         for linie in range(NR_LINII):
             for coloana in range(NR_COLOANE):
                 patr = pygame.Rect(coloana*(dim_celula+1), linie * (dim_celula+1), dim_celula, dim_celula)
-                cls.celuleGrid.append(patr)
+                cls.celuleGrid[linie][coloana] = patr
 
     def final(self):
         if self.prot_jucatori['1'] < 0 and self.prot_jucatori['2'] < 0:
@@ -561,59 +574,55 @@ def main():
     # creare stare initiala
     stare_curenta = Stare(tabla_curenta, '1', ADANCIME_MAX)
     tabla_curenta.deseneaza_grid()
- 
+
     while True:
-        while (stare_curenta.j_curent == Joc.JMIN): # e omul la mutare
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    # iesim din program
-                    pygame.quit()
-                    sys.exit()
+        pass
 
-                elif event.type == pygame.MOUSEBUTTONDOWN:
-                    pos = pygame.mouse.get_pos()  # coordonatele cursorului
-                    tabla_curenta = stare_curenta.tabla_joc
-                
+    while True:
+        activez_bomba = False
+        pun_bomba = False
+        pozitie_noua = (0, 0)
+        # if (stare_curenta.j_curent == Joc.JMIN): # e omul la mutare
+        if True: # pt debug
+            while True: # cat timp nu facem o deplasare mai asteptam mutari
+                for event in pygame.event.get():
+                    if event.type == pygame.QUIT:
+                        # iesim din program
+                        pygame.quit()
+                        sys.exit()
 
-                activez_bomba = False
+                    elif event.type == pygame.MOUSEBUTTONDOWN:
+                        pos = pygame.mouse.get_pos()  # coordonatele cursorului
+                        tabla_curenta = stare_curenta.tabla_joc
 
-                for i in range(nl):
-                    for j in range(nc):
+                        x = None
+                        y = None
+
+                        for i in range(nl):
+                            for j in range(nc):
+                                if Joc.celuleGrid[i][j].collidepoint(pos):
+                                    if tabla_curenta.harta[i][j] == Joc.BOMBA_INACTIVA:
+                                        activez_bomba = True
+                                        x = i
+                                        y = j
+                                    else:
+                                        pozitie_noua = (i, j)
                         
+                        if activez_bomba:
+                            tabla_intermediara = copy.deepcopy(tabla_curenta)
+                            tabla_intermediara.harta[x][y] = Joc.BOMBA_INACTIVA
+                            tabla_intermediara.deseneaza_grid()
+                        else:
+                            if event.button == 3: # click dreapta
+                                pun_bomba = True
+                            tabla_noua = stare_curenta.tabla_joc.muta(stare_curenta.j_curent, pozitie_noua, pun_bomba, activez_bomba)
+                            
+                            stare_curenta = Stare(tabla_noua, Joc.jucator_opus(stare_curenta.j_curent), ADANCIME_MAX)
 
-                elif event.type == pygame.MOUSEBUTTONDOWN:
+                            tabla_noua.deseneaza_grid()
+                            break
 
-                    pos = pygame.mouse.get_pos()  # coordonatele cursorului la momentul clickului
-
-                    for np in range(len(Joc.celuleGrid)):
-
-                        if Joc.celuleGrid[np].collidepoint(pos):
-                            # linie=np//Joc.NR_COLOANE
-                            coloana = np % Joc.NR_COLOANE
-                            ###############################
-
-                            if stare_curenta.tabla_joc.matr[0][coloana] == Joc.LIBER:
-                                niv = 0
-                                while True:
-                                    if niv == Joc.NR_LINII or stare_curenta.tabla_joc.matr[niv][coloana] != Joc.LIBER:
-                                        stare_curenta.tabla_joc.matr[niv - 1][coloana] = Joc.JMIN
-                                        stare_curenta.tabla_joc.ultima_mutare = (niv-1, coloana)
-                                        break
-                                    niv += 1
-
-                                # afisarea starii jocului in urma mutarii utilizatorului
-                                print("\nTabla dupa mutarea jucatorului")
-                                print(str(stare_curenta))
-
-                                stare_curenta.tabla_joc.deseneaza_grid(coloana_marcaj=coloana)
-                                # testez daca jocul a ajuns intr-o stare finala
-                                # si afisez un mesaj corespunzator in caz ca da
-                                if (afis_daca_final(stare_curenta)):
-                                    break
-
-                                # S-a realizat o mutare. Schimb jucatorul cu cel opus
-                                stare_curenta.j_curent = Joc.jucator_opus(stare_curenta.j_curent)
-
+            afis_daca_final(stare_curenta)
         # --------------------------------
         else:  # jucatorul e JMAX (calculatorul)
             # Mutare calculator
