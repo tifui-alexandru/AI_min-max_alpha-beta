@@ -202,6 +202,10 @@ class Joc:
             print("\nPozitie nevecina")
             return False
 
+        # vreau sa activez, dar nu este
+        if activeaza_bomba and self.bomba_inactiva[jucator] is None:
+            return False
+
         # punem fara sa activam
         if pune_bomba == 1 and activeaza_bomba == 0 and self.bomba_inactiva[jucator]:
             print("\nTrebuia sa activam bomba")
@@ -223,8 +227,6 @@ class Joc:
         new_prot_jucatori = copy.deepcopy(self.prot_jucatori)
         new_k_jucatori = copy.deepcopy(self.k_jucatori)
         new_bomba_inactiva = copy.deepcopy(self.bomba_inactiva)
-
-        print(jucator, pozitie_noua, pune_bomba, activeaza_bomba)
 
         # harta
         (x, y) = self.get_pos(jucator)
@@ -295,7 +297,7 @@ class Joc:
                         l_mutari.append(joc)
         return l_mutari
 
-    def estimare1(self, adancime, jucator):
+    def estimare_scor1(self, adancime, jucator):
         '''
         Definim o functie f(patrat), unde patrat este un patrat vecin jucatorului curent
         Aceasta ne va da un scor de 'cat de bine' ar fi sa mutam in patratul respectiv
@@ -335,7 +337,8 @@ class Joc:
         total = 0
 
         for d in self.directions:
-            (new_x, new_y) = (x, y) + d
+            new_x = x + d[0]
+            new_y = y + d[1]
             if new_x < 0 or y < new_y or new_x >= self.NR_LINII or new_y >= self.NR_COLOANE:
                 # Y
                 total -= 100
@@ -399,13 +402,14 @@ class Joc:
                     continue
             
                 for d in self.directions:
-                    (new_x, new_y) = (x, y) + d
+                    new_x = x + d[0]
+                    new_y = y + d[0]
                     if (new_x, new_y) not in vizitat:
                         vizitat.add((new_x, new_y))
                         q.append((new_x, new_y, k - 1))
         return total
 
-    def estimare2(self, adancime, jucator):
+    def estimare_scor2(self, adancime, jucator):
         '''
         Fie k' = min(k - k_jucator1, k - k_jucator2)
         A = numarul de patrate accesibile de jucator aflate la o distanta <= k'
@@ -448,12 +452,17 @@ class Joc:
         
         return (A / (k_prim * (k_prim + 1)) - 1) * 100 + NP + NPA / 2
 
-    def estimeaza_scor(self, adancime, jucator):
+    def estimeaza_scor(self, adancime):
+        # ne intereseaza ca JMAX sa aiba scor mare, iar JMIN scor mic
+        # vom returna diferenta celor doua
         global tip_estimare
         if tip_estimare == 1:
-            return self.estimare1(adancime, jucator)
+            a = self.estimare_scor1(adancime, Joc.JMAX)
+            b = self.estimare_scor1(adancime, Joc.JMIN)
         else:
-            return self.estimare2(adancime, jucator)
+            a = self.estimare_scor2(adancime, Joc.JMAX)
+            b = self.estimare_scor2(adancime, Joc.JMIN)
+        return a - b
 
     def sirAfisare(self):
         sir = ""
@@ -515,25 +524,28 @@ class Stare:
 
 def min_max(stare):
 
-	if stare.adancime == 0 or stare.tabla_joc.final():
-		stare.scor = stare.tabla_joc.estimeaza_scor(stare.adancime)
-		return stare
+    if stare.adancime == 0 or stare.tabla_joc.final():
+        stare.scor = stare.tabla_joc.estimeaza_scor(stare.adancime)
+        return stare
 
-	# calculez toate mutarile posibile din starea curenta
-	stare.mutari_posibile = stare.mutari()
+    # calculez toate mutarile posibile din starea curenta
+    stare.mutari_posibile = stare.mutari()
+    print(type(stare.mutari_posibile[0]))
 
-	# aplic algoritmul minimax pe toate mutarile posibile (calculand astfel subarborii lor)
-	mutari_scor = [min_max(mutare) for mutare in stare.mutari_posibile]
+    # aplic algoritmul minimax pe toate mutarile posibile (calculand astfel subarborii lor)
+    mutari_scor = [min_max(mutare) for mutare in stare.mutari_posibile]
 
-	if stare.j_curent == Joc.JMAX:
-		# daca jucatorul e JMAX aleg starea-fiica cu scorul maxim
-		stare.stare_aleasa = max(mutari_scor, key=lambda x: x.scor)
-	else:
-		# daca jucatorul e JMIN aleg starea-fiica cu scorul minim
-		stare.stare_aleasa = min(mutari_scor, key=lambda x: x.scor)
-	stare.scor = stare.stare_aleasa.scor
-	return stare
+    if stare.j_curent == Joc.JMAX:
+        # daca jucatorul e JMAX aleg starea-fiica cu scorul maxim
+        stare.stare_aleasa = max(mutari_scor, key=lambda x: x.scor)
+    else:
+        # daca jucatorul e JMIN aleg starea-fiica cu scorul minim
+        stare.stare_aleasa = min(mutari_scor, key=lambda x: x.scor)
+    stare.scor = stare.stare_aleasa.scor
+    return stare
 
+
+""" Algoritmul AlphaBeta """
 
 def alpha_beta(alpha, beta, stare):
 	if stare.adancime == 0 or stare.tabla_joc.final():
@@ -689,35 +701,36 @@ def deseneaza_alegeri(display, tabla_curenta):
         top=170,
         left=30,
         listaButoane=[
-            Buton(display=display, w=100, h=30, text="OM vs OM", valoare=1),
-            Buton(display=display, w=100, h=30, text="OM vs PC", valoare=2),
-            Buton(display=display, w=100, h=30, text="PC vs PC", valoare=3)
+            Buton(display=display, w=100, h=30, text="OM vs PC", valoare="OM vs PC"),
+            Buton(display=display, w=100, h=30, text="OM vs OM", valoare="OM vs OM"),
+            Buton(display=display, w=100, h=30, text="PC vs PC", valoare="PC vs PC")
         ],
         indiceSelectat=0)
-    btn_estimare_om = GrupButoane(
+    btn_estimare = GrupButoane(
         top=240,
         left=30,
         listaButoane=[
-            Buton(display=display, w=130, h=30, text="Estimare OM 1", valoare=1),
-            Buton(display=display, w=130, h=30, text="Estimare OM 2", valoare=2)
+            Buton(display=display, w=130, h=30, text="Estimare 1", valoare=1),
+            Buton(display=display, w=130, h=30, text="Estimare 2", valoare=2)
                 ],
         indiceSelectat=0)
-    btn_estimare_pc = GrupButoane(
+    btn_adancime = GrupButoane(
         top=310,
         left=30,
         listaButoane=[
-            Buton(display=display, w=130, h=30, text="Estimare PC 1", valoare=1),
-            Buton(display=display, w=130, h=30, text="Estimare PC 2", valoare=2)
-                ],
+            Buton(display=display, w=130, h=30, text="Nivel incepator", valoare="incepator"),
+            Buton(display=display, w=130, h=30, text="Nivel mediu", valoare="mediu"),
+            Buton(display=display, w=130, h=30, text="Nivel avansat", valoare="avansat")
+        ],
         indiceSelectat=0)
     
-    ok = Buton(display=display, top=360, left=30, w=40,
+    ok = Buton(display=display, top=400, left=30, w=40,
                 h=30, text="ok", culoareFundal=(155, 0, 55))
     btn_alg.deseneaza()
     btn_juc.deseneaza()
     btn_mod_joc.deseneaza()
-    btn_estimare_om.deseneaza()
-    btn_estimare_pc.deseneaza()
+    btn_estimare.deseneaza()
+    btn_adancime.deseneaza()
     ok.deseneaza()
 
     while True:
@@ -730,12 +743,12 @@ def deseneaza_alegeri(display, tabla_curenta):
                 if not btn_alg.selecteazaDupacoord(pos):
                     if not btn_juc.selecteazaDupacoord(pos):
                         if not btn_mod_joc.selecteazaDupacoord(pos):
-                            if not btn_estimare_om.selecteazaDupacoord(pos):
-                                if not btn_estimare_pc.selecteazaDupacoord(pos):
+                            if not btn_estimare.selecteazaDupacoord(pos):
+                                if not btn_adancime.selecteazaDupacoord(pos):
                                     if ok.selecteazaDupacoord(pos):
                                         display.fill((0, 0, 0))  # stergere ecran
                                         tabla_curenta.deseneaza_grid()
-                                        return btn_juc.getValoare(), btn_alg.getValoare()
+                                        return (btn_juc.getValoare(), btn_alg.getValoare(), btn_mod_joc.getValoare(), btn_estimare.getValoare(), btn_adancime.getValoare())
         pygame.display.update()
 
 def main():
@@ -767,8 +780,37 @@ def main():
 
     # initializare tabla
     tabla_curenta = Joc(k, harta)
-    Joc.JMIN, tip_algoritm = deseneaza_alegeri(ecran, tabla_curenta)
-    print(Joc.JMIN, tip_algoritm)
+    global tip_estimare
+    global ADANCIME_MAX
+    (Joc.JMIN, tip_algoritm, mod_joc, tip_estimare, dificultate) = deseneaza_alegeri(ecran, tabla_curenta)
+
+    print("\n\n")
+    
+    print("Mod de joc:", mod_joc)
+
+    if mod_joc == "OM vs PC":
+        print("Jucatorul uman este jucatorul", Joc.JMIN)
+
+    if mod_joc == "OM vs PC" or "PC vs PC":
+        print("Algoritm folosit:", tip_algoritm)
+        print("Dificultate: nivel ", dificultate)
+
+        if dificultate == "incepator":
+            ADANCIME_MAX = 2
+        elif dificultate == "mediu":
+            ADANCIME_MAX = 3
+        else:
+            ADANCIME_MAX = 4
+
+        print("Adancime maxima: ", ADANCIME_MAX)
+
+    if mod_joc == "OM vs PC":
+        print("Tip estimare: ", tip_estimare)
+    elif mod_joc == "PC vs PC":
+        print("PC1: estimare1")
+        print("PC2: estimare2")
+
+    print("\n")
 
     Joc.JMAX = '2' if Joc.JMIN == '1' else '1'
 
@@ -785,70 +827,70 @@ def main():
     terminat_mutare = False
 
     while True:
-        # if (stare_curenta.j_curent == Joc.JMIN): # e omul la mutare
-        if True: # pt debug
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    # iesim din program
-                    pygame.quit()
-                    sys.exit()
+        if (stare_curenta.j_curent == Joc.JMIN): # e omul la mutare
+            terminat_mutare = False
+            while terminat_mutare == False:
+                for event in pygame.event.get():
+                    if event.type == pygame.QUIT:
+                        # iesim din program
+                        pygame.quit()
+                        sys.exit()
 
-                elif event.type == pygame.MOUSEBUTTONDOWN:
-                    pos = pygame.mouse.get_pos()  # coordonatele cursorului
-                    tabla_curenta = stare_curenta.tabla_joc
+                    elif event.type == pygame.MOUSEBUTTONDOWN:
+                        pos = pygame.mouse.get_pos()  # coordonatele cursorului
+                        tabla_curenta = stare_curenta.tabla_joc
 
-                    de_activat_bomba = False
-                    for i in range(nl):
-                        for j in range(nc):
-                            if Joc.celuleGrid[i][j].collidepoint(pos):
-                                if tabla_curenta.harta[i][j] == Joc.BOMBA_INACTIVA:
-                                    de_activat_bomba = True
-                                pozitie_noua = (i, j)
-                    
-                    if event.button == 3 or stare_curenta.tabla_joc.k_jucatori[stare_curenta.j_curent] + 1 == k:
-                        pun_bomba = True
-
-                    if de_activat_bomba:
-                        activez_bomba = True
-                        tabla_intermediara = copy.deepcopy(tabla_curenta)
-                        tabla_intermediara.harta[pozitie_noua[0]][pozitie_noua[1]] = Joc.BOMBA
-                        tabla_intermediara.deseneaza_grid()
-                        print("Tabla intermediara")
-                        print(str(tabla_intermediara))
-                    else:
-                        if pun_bomba and stare_curenta.tabla_joc.bomba_inactiva[stare_curenta.j_curent]:
-                            activez_bomba = True
-
-                        tabla_noua = stare_curenta.tabla_joc.muta(stare_curenta.j_curent, pozitie_noua, pun_bomba, activez_bomba)
+                        de_activat_bomba = False
+                        for i in range(nl):
+                            for j in range(nc):
+                                if Joc.celuleGrid[i][j].collidepoint(pos):
+                                    if tabla_curenta.harta[i][j] == Joc.BOMBA_INACTIVA:
+                                        de_activat_bomba = True
+                                    pozitie_noua = (i, j)
                         
-                        activez_bomba = False
+                        if event.button == 3 or stare_curenta.tabla_joc.k_jucatori[stare_curenta.j_curent] + 1 == k:
+                            pun_bomba = True
 
-                        if tabla_noua is None:
-                            print("Mutare invalida\n")
-                            continue
+                        if de_activat_bomba:
+                            activez_bomba = True
+                            tabla_intermediara = copy.deepcopy(tabla_curenta)
+                            tabla_intermediara.harta[pozitie_noua[0]][pozitie_noua[1]] = Joc.BOMBA
+                            tabla_intermediara.deseneaza_grid()
+                            print("Tabla intermediara")
+                            print(str(tabla_intermediara))
+                        else:
+                            if pun_bomba and stare_curenta.tabla_joc.bomba_inactiva[stare_curenta.j_curent]:
+                                activez_bomba = True
 
-                        stare_curenta = Stare(tabla_noua, Joc.jucator_opus(stare_curenta.j_curent), ADANCIME_MAX)
+                            tabla_noua = stare_curenta.tabla_joc.muta(stare_curenta.j_curent, pozitie_noua, pun_bomba, activez_bomba)
+                            
+                            activez_bomba = False
 
-                        tabla_noua.deseneaza_grid()
-                        print("Tabla noua")
-                        print(str(tabla_noua))
+                            if tabla_noua is None:
+                                print("Mutare invalida\n")
+                                continue
 
-                        terminat_mutare = True
+                            stare_curenta = Stare(tabla_noua, Joc.jucator_opus(stare_curenta.j_curent), ADANCIME_MAX)
 
-                        break
+                            tabla_noua.deseneaza_grid()
+                            print("Tabla noua")
+                            print(str(tabla_noua))
 
-            if terminat_mutare and afis_daca_final(stare_curenta):
-                break
+                            terminat_mutare = True
 
-            # resetam valorile
-            if terminat_mutare:
-                activez_bomba = False
-                pun_bomba = False
-                pozitie_noua = (0, 0)
-                terminat_mutare = False
+                # resetam valorile
+                if terminat_mutare:
+                    if afis_daca_final(stare_curenta):
+                        while True:
+                            for event in pygame.event.get():
+                                if event.type == pygame.QUIT:
+                                    # iesim din program
+                                    pygame.quit()
+                                    sys.exit()
 
-            S-a realizat o mutare. Schimb jucatorul cu cel opus
-            # stare_curenta.j_curent = Joc.jucator_opus(stare_curenta.j_curent)
+                    activez_bomba = False
+                    pun_bomba = False
+                    pozitie_noua = (0, 0)
         # --------------------------------
         else:  # jucatorul e JMAX (calculatorul)
             # Mutare calculator
@@ -870,7 +912,12 @@ def main():
             stare_curenta.tabla_joc.deseneaza_grid()
 
             if afis_daca_final(stare_curenta):
-                break
+                while True:
+                    for event in pygame.event.get():
+                        if event.type == pygame.QUIT:
+                            # iesim din program
+                            pygame.quit()
+                            sys.exit()
 
             # S-a realizat o mutare. Schimb jucatorul cu cel opus
             stare_curenta.j_curent = Joc.jucator_opus(stare_curenta.j_curent)
