@@ -126,7 +126,6 @@ class Joc:
                         self.__class__.display.blit(self.__class__.img_bomba_inactiva2,(coloana * (self.__class__.dim_celula+1), linie * (self.__class__.dim_celula+1)))
                 elif self.harta[linie][coloana] == Joc.PROTECTIE:
                     self.__class__.display.blit(self.__class__.img_protectie,(coloana * (self.__class__.dim_celula+1), linie * (self.__class__.dim_celula+1)))
-
 		# pygame.display.flip()
         pygame.display.update()
 
@@ -139,11 +138,20 @@ class Joc:
         cls.display = display
         cls.dim_celula = dim_celula
         cls.img_1 = pygame.image.load('jucator1.png')
+        cls.img_1 = pygame.transform.scale(cls.img_1, (dim_celula, dim_celula))
         cls.img_2 = pygame.image.load('jucator2.png')
+        cls.img_2 = pygame.transform.scale(cls.img_2, (dim_celula, dim_celula))
         cls.img_bomba = pygame.image.load('bomba.png')
+        cls.img_bomba = pygame.transform.scale(cls.img_bomba, (dim_celula, dim_celula))
         cls.img_bomba_inactiva1 = pygame.image.load('bomba_inactiva1.png')
+        cls.img_bomba_inactiva1 = pygame.transform.scale(
+            cls.img_bomba_inactiva1, (dim_celula, dim_celula))
         cls.img_bomba_inactiva2 = pygame.image.load('bomba_inactiva2.png')
+        cls.img_bomba_inactiva2 = pygame.transform.scale(
+            cls.img_bomba_inactiva2, (dim_celula, dim_celula))
         cls.img_protectie = pygame.image.load('protectie.png')
+        cls.img_protectie = pygame.transform.scale(
+            cls.img_protectie, (dim_celula, dim_celula))
         cls.celuleGrid = [[None for _ in range(NR_COLOANE)] for _ in range(NR_LINII)]  # este lista cu patratelele din grid
         for linie in range(NR_LINII):
             for coloana in range(NR_COLOANE):
@@ -173,6 +181,7 @@ class Joc:
 
         # valid pe tabla
         if self.valid_pos(pozitie_noua[0], pozitie_noua[1]) == False:
+            print("\nPozitie proasta")
             return False
 
         # se poate obtine din pozitia curenta
@@ -180,15 +189,18 @@ class Joc:
         distx = abs(pozitie_noua[0] - x)
         disty = abs(pozitie_noua[1] - y)
 
-        if distx > 1 or disty > 1:
+        if distx + disty > 1:
+            print("\nPozitie nevecina")
             return False
 
         # punem fara sa activam
         if pune_bomba == 1 and activeaza_bomba == 0 and self.bomba_inactiva[jucator]:
+            print("\nTrebuia sa activam bomba")
             return False
 
         # nu punem, dar ar trebui
         if self.k_jucatori[jucator] + 1 == self.k and pune_bomba == 0:
+            print("\nTrebuia sa punem bomba")
             return False
 
     def muta(self, jucator, pozitie_noua, pune_bomba, activeaza_bomba):
@@ -242,7 +254,7 @@ class Joc:
 
         self.harta[x][y] = Joc.LIBER
 
-        for i in range(len(self.NR_LINII)):
+        for i in range(self.NR_LINII):
             if self.harta[i][y] == Joc.BOMBA:
                 self.explodeaza(i, y)
             elif self.harta[i][y] == '1': 
@@ -250,7 +262,7 @@ class Joc:
             elif self.harta[i][y] == '2': 
                 self.prot_jucatori['2'] -= 1 
 
-        for j in range(len(self.NR_COLOANE)):
+        for j in range(self.NR_COLOANE):
             if self.harta[x][j] == Joc.BOMBA:
                 self.explodeaza(x, j)
             elif self.harta[x][j] == '1':
@@ -308,15 +320,14 @@ class Stare:
 	De asemenea cere ca in clasa Joc sa fie definita si o metoda numita mutari() care ofera lista cu configuratiile posibile in urma mutarii unui jucator
 	"""
 
-	def __init__(self, tabla_joc, j_curent, adancime, parinte=None, scor=None):
+	def __init__(self, tabla_joc, j_curent, adancime, parinte=None, estimare=None):
 		self.tabla_joc = tabla_joc
 		self.j_curent = j_curent
 
 		# adancimea in arborele de stari
 		self.adancime = adancime
 
-		# scorul starii (daca e finala) sau al celei mai bune stari-fiice (pentru jucatorul curent)
-		self.scor = scor
+		self.estimare = estimare
 
 		# lista de mutari posibile din starea curenta
 		self.mutari_posibile = []
@@ -327,8 +338,7 @@ class Stare:
 	def mutari(self):
 		l_mutari = self.tabla_joc.mutari(self.j_curent)
 		juc_opus = Joc.jucator_opus(self.j_curent)
-		l_stari_mutari = [
-			Stare(mutare, juc_opus, self.adancime-1, parinte=self) for mutare in l_mutari]
+		l_stari_mutari = [Stare(mutare, juc_opus, self.adancime-1, parinte=self) for mutare in l_mutari]
 
 		return l_stari_mutari
 
@@ -412,16 +422,18 @@ def alpha_beta(alpha, beta, stare):
 
 
 def afis_daca_final(stare_curenta):
-	final = stare_curenta.tabla_joc.final()
-	if(final):
-		if (final == "remiza"):
-			print("Remiza!")
-		else:
-			print("A castigat "+final)
+    final = stare_curenta.tabla_joc.final()
+    if(final):
+        if (final == "remiza"):
+            stare_curenta.tabla_joc.deseneaza_grid(remiza = True)
+            print("Remiza!")
+        else:
+            stare_curenta.tabla_joc.deseneaza_grid(castigator = final)
+            print("A castigat "+final)
 
-		return True
+        return True
 
-	return False
+    return False
 
 
 class Buton:
@@ -510,8 +522,8 @@ def deseneaza_alegeri(display, tabla_curenta):
 		top=100,
 		left=30,
 		listaButoane=[
-			Buton(display=display, w=35, h=30, text="1", valoare="x"),
-			Buton(display=display, w=35, h=30, text="2", valoare="0")
+			Buton(display=display, w=35, h=30, text="1", valoare="1"),
+			Buton(display=display, w=35, h=30, text="2", valoare="2")
                 ],
 		indiceSelectat=0)
 	ok = Buton(display=display, top=170, left=30, w=40,
@@ -548,7 +560,7 @@ def main():
     with open("harta.txt") as fd:
         temp = fd.read().strip().split('\n')
         k = int(temp[0])
-        harta = temp[1:]
+        harta = [list(line) for line in temp[1:]]
 
     if k is None:
         print("Eroare in citirea fisierului cu harta\n")
@@ -576,53 +588,58 @@ def main():
     tabla_curenta.deseneaza_grid()
 
     while True:
-        pass
-
-    while True:
         activez_bomba = False
         pun_bomba = False
         pozitie_noua = (0, 0)
         # if (stare_curenta.j_curent == Joc.JMIN): # e omul la mutare
         if True: # pt debug
-            while True: # cat timp nu facem o deplasare mai asteptam mutari
-                for event in pygame.event.get():
-                    if event.type == pygame.QUIT:
-                        # iesim din program
-                        pygame.quit()
-                        sys.exit()
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    # iesim din program
+                    pygame.quit()
+                    sys.exit()
 
-                    elif event.type == pygame.MOUSEBUTTONDOWN:
-                        pos = pygame.mouse.get_pos()  # coordonatele cursorului
-                        tabla_curenta = stare_curenta.tabla_joc
+                elif event.type == pygame.MOUSEBUTTONDOWN:
+                    pos = pygame.mouse.get_pos()  # coordonatele cursorului
+                    tabla_curenta = stare_curenta.tabla_joc
 
-                        x = None
-                        y = None
+                    for i in range(nl):
+                        for j in range(nc):
+                            if Joc.celuleGrid[i][j].collidepoint(pos):
+                                if tabla_curenta.harta[i][j] == Joc.BOMBA_INACTIVA:
+                                    activez_bomba = True
+                                pozitie_noua = (i, j)
+                    
+                    if event.button == 3 or stare_curenta.tabla_joc.k_jucatori[stare_curenta.j_curent] + 1 == k:
+                        pun_bomba = True
 
-                        for i in range(nl):
-                            for j in range(nc):
-                                if Joc.celuleGrid[i][j].collidepoint(pos):
-                                    if tabla_curenta.harta[i][j] == Joc.BOMBA_INACTIVA:
-                                        activez_bomba = True
-                                        x = i
-                                        y = j
-                                    else:
-                                        pozitie_noua = (i, j)
+                    if activez_bomba:
+                        tabla_intermediara = copy.deepcopy(tabla_curenta)
+                        tabla_intermediara.harta[pozitie_noua[0]][pozitie_noua[1]] = Joc.BOMBA_INACTIVA
+                        tabla_intermediara.deseneaza_grid()
+                        print("Tabla intermediara")
+                        print(str(tabla_intermediara))
+                    else:
+                        if pun_bomba and stare_curenta.tabla_joc.bomba_inactiva[stare_curenta.j_curent]:
+                            activez_bomba = True
+
+                        tabla_noua = stare_curenta.tabla_joc.muta(stare_curenta.j_curent, pozitie_noua, pun_bomba, activez_bomba)
                         
-                        if activez_bomba:
-                            tabla_intermediara = copy.deepcopy(tabla_curenta)
-                            tabla_intermediara.harta[x][y] = Joc.BOMBA_INACTIVA
-                            tabla_intermediara.deseneaza_grid()
-                        else:
-                            if event.button == 3: # click dreapta
-                                pun_bomba = True
-                            tabla_noua = stare_curenta.tabla_joc.muta(stare_curenta.j_curent, pozitie_noua, pun_bomba, activez_bomba)
-                            
-                            stare_curenta = Stare(tabla_noua, Joc.jucator_opus(stare_curenta.j_curent), ADANCIME_MAX)
+                        activez_bomba = False
 
-                            tabla_noua.deseneaza_grid()
-                            break
+                        if tabla_noua is None:
+                            print("Mutare invalida\n")
+                            continue
 
-            afis_daca_final(stare_curenta)
+                        stare_curenta = Stare(tabla_noua, Joc.jucator_opus(stare_curenta.j_curent), ADANCIME_MAX)
+
+                        tabla_noua.deseneaza_grid()
+                        print("Tabla noua")
+                        print(str(tabla_noua))
+                        break
+
+            if afis_daca_final(stare_curenta):
+                break
         # --------------------------------
         else:  # jucatorul e JMAX (calculatorul)
             # Mutare calculator
