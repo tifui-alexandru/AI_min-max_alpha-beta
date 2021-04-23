@@ -33,7 +33,7 @@ class Joc:
     PROTECTIE = 'p'
     LIBER = ' '
 
-    directions = [(-1, 0, 'N'), (1, 0, 'S'), (0, -1, 'V'), (0, 1, 'E')]
+    directions = [(-1, 0), (1, 0), (0, -1), (0, 1)] # N S V E
  
     def __init__(self, k, harta, k_jucatori = {'1': 0, '2': 0}, prot_jucatori = {'1': 0, '2': 0}, bomba_inactiva = {'1': None, '2': None}):
         self.k = k
@@ -45,7 +45,7 @@ class Joc:
         self.bomba_inactiva = bomba_inactiva
 
     def get_bombe(self, x, y):
-        # returneaza lista bombelor active care afecteaza pozitia (x, y)
+        # returneaza lista bombelor active care ar fi activate de o mutare la pozitia (x, y)
         ans = []
 
         for linie in range(x, self.NR_LINII):
@@ -180,7 +180,7 @@ class Joc:
     def valid_pos(self, x, y):
         if x < 0 or y < 0:
             return False
-        if x > self.NR_LINII or y > self.NR_COLOANE:
+        if x >= self.NR_LINII or y >= self.NR_COLOANE:
             return False
 
         return self.harta[x][y] == Joc.LIBER or self.harta[x][y] == Joc.PROTECTIE
@@ -303,15 +303,19 @@ class Joc:
 
         Facem notatiile:
              X - un patrat care ar declansa cel putin o bomba 
-             NP - numarul de protectii de pare le detine jucatorul curent
+             Y - un patrat din afara hartii
+             NP - numarul de protectii pe care le detine jucatorul curent
              NB - numarul de bombe care s-ar declansa si ar afecta jucatorul de pe patratul X
+             proc = 0 daca la pozitia vecina nu se afla o pozitie si 1 altfel
 
         Atribuim functia in felul urmator:
             f(LIBER) = 100
             f(ZID/BOMBA) = -100
-                    | -100 daca NP < NB
-            f(X) =  |
-                    |   100 * (NP - NB) / NP daca NP >= NB
+            f(PROTECTIE) = 130
+            f(Y) = -100
+                    | -100 daca NP + proc < NB
+            f(X) =  |  
+                    |  100 * (NP + proc - NB) / NP daca NP + proc >= NB
 
         Estimarea ordoneaza starile deoarece fiecare jucator tinde sa aiba o zona cat mai mare de deplasare.
         De asemena, jucatorii cu mai multe protectii sunt avantajati, deoarece isi extind oarecum zona de deplasare.
@@ -328,10 +332,104 @@ class Joc:
 
         # altfel adancimea este 0
         (x, y) = self.get_pos(jucator)
+        total = 0
 
-        return 0
+        for d in self.directions:
+            (new_x, new_y) = (x, y) + d
+            if new_x < 0 or y < new_y or new_x >= self.NR_LINII or new_y >= self.NR_COLOANE:
+                # Y
+                total -= 100
+            elif self.harta[new_x][new_y] == Joc.BOMBA or self.harta[new_x][new_y] == Joc.ZID or self.harta[new_x][new_y] == Joc.BOMBA_INACTIVA:
+                total -= 100
+            elif self.patrat_bombat(new_x, new_y):
+                proc = 0
+                if self.harta[new_x][new_y] == Joc.PROTECTIE:
+                    proc = 1
+
+                NP = proc + self.prot_jucatori[jucator]
+                NB = 0
+
+                for i in range(self.NR_LINII):
+                    if self.harta[i][new_y] == Joc.BOMBA:
+                        NB += 1
+
+                for j in range(self.NR_COLOANE):
+                    if self.harta[new_x][j] == Joc.BOMBA:
+                        NB += 1
+
+                if NP < NB:
+                    total -= 100
+                else:
+                    total += 100 * (NP - NB) / NP
+                
+            else:
+                if self.harta[new_x][new_y] == Joc.LIBER:
+                    total += 100
+                else:
+                    # protectie
+                    total += 130
+
+        return total
+
+    def corespunde(self, x, y, tip_campuri):
+        # functie pentru pentru
+        if x < 0 or y < 0 or x >= self.NR_LINII or y >= self.NR_COLOANE:
+            return False
+        if self.harta not in tip_campuri:
+            return False
+        if self.patrat_bombat(x, y):
+            return False
+        return True
+
+    def calculeaza_aria(self, x, y, k, tip_campuri, campuri_de_numarat):
+        # functie ajutatoare pentru estimare2
+        # vom face un bfs
+        vizitat = {(x, y)}
+        q = [(x, y, k)] 
+
+        total = 0
+
+        while len(q):
+            (x, y, k) = q.pop(0)
+            if self.corespunde(x, y, tip_campuri):
+                if (x, y) in campuri_de_numarat:
+                    total += 1
+
+                if k == 0:
+                    continue
+            
+                for d in self.directions:
+                    (new_x, new_y) = (x, y) + d
+                    if (new_x, new_y) not in vizitat:
+                        vizitat.add((new_x, new_y))
+                        q.append((new_x, new_y, k - 1))
+        return total
 
     def estimare2(self, adancime, jucator):
+        '''
+        Fie k' = min(k - k_jucator1, k - k_jucator2)
+        A = numarul de patrate accesibile de jucator aflate la o distanta <= k'
+        NP = numarul de protectii ale jucatorului in momentul actual
+        NPA = numarul de protectii aflate la o distanta <= k' de jucator
+
+        Estimarea va fi (A / (k' * (k' + 1)) - 1) * 100 + NP + NPA / 2
+
+        Cum am ajuns la aceasta formula?
+        
+        Fiecare jucator doreste sa aiba o arie cat mai mare in care sa se poata deplasa
+        pana cand o bomba va fi activata, adica in k' mutari.
+
+        De asemenea, acesta este avantajat daca are un numar de protectii.
+        Am considerat ca 2 protectii aflate in aria posibila de miscari valoreaza
+        cat o protectie deja aflata in posesia jucatorului (practic am aproximat ca probabilitatea
+        ca acesta sa ia o protectie este de 1/2).
+
+        Dorim o estimare care pentru A = 0 sa dea -100, iar pentru A = 2 * k'(k' + 1) sa dea 100.
+        Observam ca 2 * k'(k' + 1) este valoarea maxima posibila a lui A.
+        De aici vine partea de (A' / (k' * (k' + 1)) - 1) * 100 a formulei,
+        protectiile reprezentand un bonus.
+        '''
+
         final = self.final()
         if final:
             if final == jucator:
@@ -342,8 +440,13 @@ class Joc:
                 return 0
 
         # altfel adancimea este 0
-
-        return 0
+        k_prim = min(self.k - self.k_jucatori['1'], self.k - self.k_jucatori['2'])
+        (x, y) = self.get_pos(jucator)
+        A = self.calculeaza_aria(x, y, k_prim, {Joc.LIBER, Joc.PROTECTIE}, {Joc.LIBER, Joc.PROTECTIE})
+        NP = self.prot_jucatori[jucator]
+        NPA = self.calculeaza_aria(x, y, k_prim, {Joc.LIBER, Joc.PROTECTIE}, {Joc.PROTECTIE})
+        
+        return (A / (k_prim * (k_prim + 1)) - 1) * 100 + NP + NPA / 2
 
     def estimeaza_scor(self, adancime, jucator):
         global tip_estimare
