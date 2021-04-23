@@ -15,6 +15,8 @@ culori = {
     'violet': (153, 0, 153)
 }
 
+tip_estimare = 1
+
 class Joc:
     """
     Clasa care defineste jocul. Se va schimba de la un joc la altul.
@@ -293,18 +295,62 @@ class Joc:
                         l_mutari.append(joc)
         return l_mutari
 
+    def estimare1(self, adancime, jucator):
+        '''
+        Definim o functie f(patrat), unde patrat este un patrat vecin jucatorului curent
+        Aceasta ne va da un scor de 'cat de bine' ar fi sa mutam in patratul respectiv
+        Estimarea va fi data de suma acestor scoruri
 
-    # def estimeaza_scor(self, adancime):
-    #     t_final = self.final()
-    #     # if (adancime==0):
-    #     if t_final == self.__class__.JMAX:
-    #         return (self.__class__.scor_maxim+adancime)
-    #     elif t_final == self.__class__.JMIN:
-    #         return (-self.__class__.scor_maxim-adancime)
-    #     elif t_final == 'remiza':
-    #         return 0
-    #     else:
-    #         return (self.linii_deschise(self.__class__.JMAX) - self.linii_deschise(self.__class__.JMIN))
+        Facem notatiile:
+             X - un patrat care ar declansa cel putin o bomba 
+             NP - numarul de protectii de pare le detine jucatorul curent
+             NB - numarul de bombe care s-ar declansa si ar afecta jucatorul de pe patratul X
+
+        Atribuim functia in felul urmator:
+            f(LIBER) = 100
+            f(ZID/BOMBA) = -100
+                    | -100 daca NP < NB
+            f(X) =  |
+                    |   100 * (NP - NB) / NP daca NP >= NB
+
+        Estimarea ordoneaza starile deoarece fiecare jucator tinde sa aiba o zona cat mai mare de deplasare.
+        De asemena, jucatorii cu mai multe protectii sunt avantajati, deoarece isi extind oarecum zona de deplasare.
+        ''' 
+
+        final = self.final()
+        if final:
+            if final == jucator:
+                return float('inf')
+            elif final == self.jucator_opus(jucator):
+                return float('-inf')
+            else:
+                return 0
+
+        # altfel adancimea este 0
+        (x, y) = self.get_pos(jucator)
+
+        return 0
+
+    def estimare2(self, adancime, jucator):
+        final = self.final()
+        if final:
+            if final == jucator:
+                return float('inf')
+            elif final == self.jucator_opus(jucator):
+                return float('-inf')
+            else:
+                return 0
+
+        # altfel adancimea este 0
+
+        return 0
+
+    def estimeaza_scor(self, adancime, jucator):
+        global tip_estimare
+        if tip_estimare == 1:
+            return self.estimare1(adancime, jucator)
+        else:
+            return self.estimare2(adancime, jucator)
 
     def sirAfisare(self):
         sir = ""
@@ -329,14 +375,15 @@ class Stare:
 	De asemenea cere ca in clasa Joc sa fie definita si o metoda numita mutari() care ofera lista cu configuratiile posibile in urma mutarii unui jucator
 	"""
 
-	def __init__(self, tabla_joc, j_curent, adancime, parinte=None, estimare=None):
+	def __init__(self, tabla_joc, j_curent, adancime, parinte=None, scor=None):
 		self.tabla_joc = tabla_joc
 		self.j_curent = j_curent
 
 		# adancimea in arborele de stari
 		self.adancime = adancime
 
-		self.estimare = estimare
+        # scorul starii curente
+		self.scor = scor
 
 		# lista de mutari posibile din starea curenta
 		self.mutari_posibile = []
@@ -663,10 +710,12 @@ def main():
                 pun_bomba = False
                 pozitie_noua = (0, 0)
                 terminat_mutare = False
+
+            # S-a realizat o mutare. Schimb jucatorul cu cel opus
+            # stare_curenta.j_curent = Joc.jucator_opus(stare_curenta.j_curent)
         # --------------------------------
         else:  # jucatorul e JMAX (calculatorul)
             # Mutare calculator
-
             # preiau timpul in milisecunde de dinainte de mutare
             t_inainte = int(round(time.time() * 1000))
             if tip_algoritm == 'minimax':
@@ -683,7 +732,8 @@ def main():
                     str(t_dupa-t_inainte)+" milisecunde.")
 
             stare_curenta.tabla_joc.deseneaza_grid()
-            if (afis_daca_final(stare_curenta)):
+
+            if afis_daca_final(stare_curenta):
                 break
 
             # S-a realizat o mutare. Schimb jucatorul cu cel opus
