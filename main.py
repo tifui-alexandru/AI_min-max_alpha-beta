@@ -221,6 +221,8 @@ class Joc:
         new_k_jucatori = copy.deepcopy(self.k_jucatori)
         new_bomba_inactiva = copy.deepcopy(self.bomba_inactiva)
 
+        print(jucator, pozitie_noua, pune_bomba, activeaza_bomba)
+
         # harta
         (x, y) = self.get_pos(jucator)
         new_harta[x][y] = Joc.LIBER
@@ -593,10 +595,12 @@ def main():
     stare_curenta = Stare(tabla_curenta, '1', ADANCIME_MAX)
     tabla_curenta.deseneaza_grid()
 
+    activez_bomba = False
+    pun_bomba = False
+    pozitie_noua = (0, 0)
+    terminat_mutare = False
+
     while True:
-        activez_bomba = False
-        pun_bomba = False
-        pozitie_noua = (0, 0)
         # if (stare_curenta.j_curent == Joc.JMIN): # e omul la mutare
         if True: # pt debug
             for event in pygame.event.get():
@@ -609,17 +613,19 @@ def main():
                     pos = pygame.mouse.get_pos()  # coordonatele cursorului
                     tabla_curenta = stare_curenta.tabla_joc
 
+                    de_activat_bomba = False
                     for i in range(nl):
                         for j in range(nc):
                             if Joc.celuleGrid[i][j].collidepoint(pos):
                                 if tabla_curenta.harta[i][j] == Joc.BOMBA_INACTIVA:
-                                    activez_bomba = True
+                                    de_activat_bomba = True
                                 pozitie_noua = (i, j)
                     
                     if event.button == 3 or stare_curenta.tabla_joc.k_jucatori[stare_curenta.j_curent] + 1 == k:
                         pun_bomba = True
 
-                    if activez_bomba:
+                    if de_activat_bomba:
+                        activez_bomba = True
                         tabla_intermediara = copy.deepcopy(tabla_curenta)
                         tabla_intermediara.harta[pozitie_noua[0]][pozitie_noua[1]] = Joc.BOMBA
                         tabla_intermediara.deseneaza_grid()
@@ -642,10 +648,20 @@ def main():
                         tabla_noua.deseneaza_grid()
                         print("Tabla noua")
                         print(str(tabla_noua))
+
+                        terminat_mutare = True
+
                         break
 
-            if afis_daca_final(stare_curenta):
+            if terminat_mutare and afis_daca_final(stare_curenta):
                 break
+
+            # resetam valorile
+            if terminat_mutare:
+                activez_bomba = False
+                pun_bomba = False
+                pozitie_noua = (0, 0)
+                terminat_mutare = False
         # --------------------------------
         else:  # jucatorul e JMAX (calculatorul)
             # Mutare calculator
