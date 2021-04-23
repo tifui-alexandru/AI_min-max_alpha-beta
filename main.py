@@ -669,41 +669,74 @@ class GrupButoane:
 
 ############# ecran initial ########################
 def deseneaza_alegeri(display, tabla_curenta):
-	btn_alg = GrupButoane(
-		top=30,
-		left=30,
-		listaButoane=[
-			Buton(display=display, w=80, h=30, text="minimax", valoare="minimax"),
-			Buton(display=display, w=80, h=30, text="alphabeta", valoare="alphabeta")
+    btn_alg = GrupButoane(
+        top=30,
+        left=30,
+        listaButoane=[
+            Buton(display=display, w=80, h=30, text="minimax", valoare="minimax"),
+            Buton(display=display, w=80, h=30, text="alphabeta", valoare="alphabeta")
                 ],
-		indiceSelectat=1)
-	btn_juc = GrupButoane(
-		top=100,
-		left=30,
-		listaButoane=[
-			Buton(display=display, w=35, h=30, text="1", valoare="1"),
-			Buton(display=display, w=35, h=30, text="2", valoare="2")
+        indiceSelectat=0)
+    btn_juc = GrupButoane(
+        top=100,
+        left=30,
+        listaButoane=[
+            Buton(display=display, w=80, h=30, text="Jucator1", valoare="1"),
+            Buton(display=display, w=80, h=30, text="Jucator2", valoare="2")
                 ],
-		indiceSelectat=0)
-	ok = Buton(display=display, top=170, left=30, w=40,
-	           h=30, text="ok", culoareFundal=(155, 0, 55))
-	btn_alg.deseneaza()
-	btn_juc.deseneaza()
-	ok.deseneaza()
-	while True:
-		for ev in pygame.event.get():
-			if ev.type == pygame.QUIT:
-				pygame.quit()
-				sys.exit()
-			elif ev.type == pygame.MOUSEBUTTONDOWN:
-				pos = pygame.mouse.get_pos()
-				if not btn_alg.selecteazaDupacoord(pos):
-					if not btn_juc.selecteazaDupacoord(pos):
-						if ok.selecteazaDupacoord(pos):
-							display.fill((0, 0, 0))  # stergere ecran
-							tabla_curenta.deseneaza_grid()
-							return btn_juc.getValoare(), btn_alg.getValoare()
-		pygame.display.update()
+        indiceSelectat=0)
+    btn_mod_joc = GrupButoane(
+        top=170,
+        left=30,
+        listaButoane=[
+            Buton(display=display, w=100, h=30, text="OM vs OM", valoare=1),
+            Buton(display=display, w=100, h=30, text="OM vs PC", valoare=2),
+            Buton(display=display, w=100, h=30, text="PC vs PC", valoare=3)
+        ],
+        indiceSelectat=0)
+    btn_estimare_om = GrupButoane(
+        top=240,
+        left=30,
+        listaButoane=[
+            Buton(display=display, w=130, h=30, text="Estimare OM 1", valoare=1),
+            Buton(display=display, w=130, h=30, text="Estimare OM 2", valoare=2)
+                ],
+        indiceSelectat=0)
+    btn_estimare_pc = GrupButoane(
+        top=310,
+        left=30,
+        listaButoane=[
+            Buton(display=display, w=130, h=30, text="Estimare PC 1", valoare=1),
+            Buton(display=display, w=130, h=30, text="Estimare PC 2", valoare=2)
+                ],
+        indiceSelectat=0)
+    
+    ok = Buton(display=display, top=360, left=30, w=40,
+                h=30, text="ok", culoareFundal=(155, 0, 55))
+    btn_alg.deseneaza()
+    btn_juc.deseneaza()
+    btn_mod_joc.deseneaza()
+    btn_estimare_om.deseneaza()
+    btn_estimare_pc.deseneaza()
+    ok.deseneaza()
+
+    while True:
+        for ev in pygame.event.get():
+            if ev.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+            elif ev.type == pygame.MOUSEBUTTONDOWN:
+                pos = pygame.mouse.get_pos()
+                if not btn_alg.selecteazaDupacoord(pos):
+                    if not btn_juc.selecteazaDupacoord(pos):
+                        if not btn_mod_joc.selecteazaDupacoord(pos):
+                            if not btn_estimare_om.selecteazaDupacoord(pos):
+                                if not btn_estimare_pc.selecteazaDupacoord(pos):
+                                    if ok.selecteazaDupacoord(pos):
+                                        display.fill((0, 0, 0))  # stergere ecran
+                                        tabla_curenta.deseneaza_grid()
+                                        return btn_juc.getValoare(), btn_alg.getValoare()
+        pygame.display.update()
 
 def main():
 	# setari interf grafica
