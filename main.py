@@ -113,7 +113,7 @@ class Joc:
                 elif self.patrat_bombat(linie, coloana):
                     culoare = culori['galben']
 
-                if remiza and (self.harta[linie][coloana] == castigator or self.harta[linie][coloana] == pierzator):
+                if remiza and (self.harta[linie][coloana] == '1' or self.harta[linie][coloana] == '2'):
                     culoare = culori['violet']
 
                 pygame.draw.rect(self.__class__.display, culoare, self.__class__.celuleGrid[linie][coloana]) #alb = (255,255,255)
@@ -847,7 +847,7 @@ def main():
                 pozitie_noua = (0, 0)
                 terminat_mutare = False
 
-            # S-a realizat o mutare. Schimb jucatorul cu cel opus
+            S-a realizat o mutare. Schimb jucatorul cu cel opus
             # stare_curenta.j_curent = Joc.jucator_opus(stare_curenta.j_curent)
         # --------------------------------
         else:  # jucatorul e JMAX (calculatorul)
