@@ -2,7 +2,7 @@ import time
 import copy
 import pygame
 import sys
-
+import statistics
 
 ADANCIME_MAX = 4
 
@@ -18,6 +18,16 @@ culori = {
 tip_estimare = 1
 
 human_move = False
+
+noduri_generate = {'1': [], '2': []}
+timp_start = int(round(time.time() * 1000))
+timp_gandire_pc = {'1': [], '2': []}
+
+nr_noduri = 0
+
+mutari_jucator = {'1': 0, '2': 0}
+
+mod_joc = None
 
 class Joc:
     """
@@ -191,8 +201,6 @@ class Joc:
         # verifica daca mutarea este valida
 
         global human_move
-
-        human_move = True
 
         # valid pe tabla
         if self.valid_pos(pozitie_noua[0], pozitie_noua[1]) == False:
@@ -515,7 +523,6 @@ class Stare:
 
     def mutari(self):
         l_mutari = self.tabla_joc.mutari(self.j_curent)
-        print(len(l_mutari))
         juc_opus = Joc.jucator_opus(self.j_curent)
         l_stari_mutari = [Stare(mutare, juc_opus, self.adancime-1, parinte=self) for mutare in l_mutari]
 
@@ -534,7 +541,8 @@ class Stare:
 
 
 def min_max(stare):
-
+    global nr_noduri
+    nr_noduri += 1
     if stare.adancime == 0 or stare.tabla_joc.final():
         stare.scor = stare.tabla_joc.estimeaza_scor(stare.adancime)
         return stare
@@ -558,49 +566,105 @@ def min_max(stare):
 """ Algoritmul AlphaBeta """
 
 def alpha_beta(alpha, beta, stare):
-	if stare.adancime == 0 or stare.tabla_joc.final():
-		stare.scor = stare.tabla_joc.estimeaza_scor(stare.adancime)
-		return stare
+    global nr_noduri
+    nr_noduri += 1
+    if stare.adancime == 0 or stare.tabla_joc.final():
+        stare.scor = stare.tabla_joc.estimeaza_scor(stare.adancime)
+        return stare
 
-	if alpha > beta:
-		return stare  # este intr-un interval invalid deci nu o mai procesez
+    if alpha > beta:
+        return stare  # este intr-un interval invalid deci nu o mai procesez
 
-	stare.mutari_posibile = stare.mutari()
+    stare.mutari_posibile = stare.mutari()
 
-	if stare.j_curent == Joc.JMAX:
-		scor_curent = float('-inf')
+    if stare.j_curent == Joc.JMAX:
+        scor_curent = float('-inf')
 
-		for mutare in stare.mutari_posibile:
-			# calculeaza scorul
-			stare_noua = alpha_beta(alpha, beta, mutare)
+        for mutare in stare.mutari_posibile:
+            # calculeaza scorul
+            stare_noua = alpha_beta(alpha, beta, mutare)
 
-			if (scor_curent < stare_noua.scor):
-				stare.stare_aleasa = stare_noua
-				scor_curent = stare_noua.scor
-			if(alpha < stare_noua.scor):
-				alpha = stare_noua.scor
-				if alpha >= beta:
-					break
+            if (scor_curent < stare_noua.scor):
+                stare.stare_aleasa = stare_noua
+                scor_curent = stare_noua.scor
+            if(alpha < stare_noua.scor):
+                alpha = stare_noua.scor
+                if alpha >= beta:
+                    break
 
-	elif stare.j_curent == Joc.JMIN:
-		scor_curent = float('inf')
+    elif stare.j_curent == Joc.JMIN:
+        scor_curent = float('inf')
 
-		for mutare in stare.mutari_posibile:
+        for mutare in stare.mutari_posibile:
 
-			stare_noua = alpha_beta(alpha, beta, mutare)
+            stare_noua = alpha_beta(alpha, beta, mutare)
 
-			if (scor_curent > stare_noua.scor):
-				stare.stare_aleasa = stare_noua
-				scor_curent = stare_noua.scor
+            if (scor_curent > stare_noua.scor):
+                stare.stare_aleasa = stare_noua
+                scor_curent = stare_noua.scor
 
-			if(beta > stare_noua.scor):
-				beta = stare_noua.scor
-				if alpha >= beta:
-					break
-	stare.scor = stare.stare_aleasa.scor
+            if(beta > stare_noua.scor):
+                beta = stare_noua.scor
+                if alpha >= beta:
+                    break
+    stare.scor = stare.stare_aleasa.scor
 
-	return stare
+    return stare
 
+def afisare_date_final():
+    print("Jucatorul 1 a facut", mutari_jucator['1'])
+    print("Jucatorul 2 a facut", mutari_jucator['2'])
+
+    global timp_start
+    global mod_joc
+    timp_final = int(round(time.time() * 1000))
+    print("Jocul a durat", timp_final-timp_start, "milisecunde")
+
+    if mod_joc == "PC vs PC":
+        print("Timpul minim de gandire al PC-ului 1 este ", min(timp_gandire_pc['1']))
+        print("Timpul maxim de gandire al PC-ului 1 este ", max(timp_gandire_pc['1']))
+        print("Timpul mediu de gandire al PC-ului 1 este ", statistics.mean(timp_gandire_pc['1']))
+        print("statistics.mediana timpului de gandire al PC-ului 1 este ", statistics.median(timp_gandire_pc['1']))
+
+        print("Timpul minim de gandire al PC-ului 2 este ", min(timp_gandire_pc['2']))
+        print("Timpul maxim de gandire al PC-ului 2 este ", max(timp_gandire_pc['2']))
+        print("Timpul mediu de gandire al PC-ului 2 este ", statistics.mean(timp_gandire_pc['2']))
+        print("statistics.mediana timpului de gandire al PC-ului 2 este ", statistics.median(timp_gandire_pc['2']))
+
+        print("Numarul minim de noduri generate la o mutare de PC-ului 1 este ", min(noduri_generate['1']))
+        print("Numarul maxim de noduri generate la o mutare de PC-ului 1 este ", max(noduri_generate['1']))
+        print("Numarul mediu de noduri generate la o mutare de PC-ului 1 este ", statistics.mean(noduri_generate['1']))
+        print("statistics.mediana numarului de noduri generate la o mutare de PC-ului 1 este ", statistics.median(noduri_generate['1']))
+
+        print("Numarul minim de noduri generate la o mutare de PC-ului 2 este ", min(noduri_generate['2']))
+        print("Numarul maxim de noduri generate la o mutare de PC-ului 2 este ", max(noduri_generate['2']))
+        print("Numarul mediu de noduri generate la o mutare de PC-ului 2 este ", statistics.mean(noduri_generate['2']))
+        print("statistics.mediana numarului de noduri generate la o mutare de PC-ului 2 este ", statistics.median(noduri_generate['2']))
+    
+    elif mod_joc == "OM vs PC":
+        if len(timp_gandire_pc['1']) > 0:
+            print("Timpul minim de gandire al PC-ului este ", min(timp_gandire_pc['1']))
+            print("Timpul maxim de gandire al PC-ului este ", max(timp_gandire_pc['1']))
+            print("Timpul mediu de gandire al PC-ului este ", statistics.mean(timp_gandire_pc['1']))
+            print("statistics.mediana timpului de gandire al PC-ului este ", statistics.median(timp_gandire_pc['1']))
+
+        else:
+            print("Timpul minim de gandire al PC-ului este ", min(timp_gandire_pc['2']))
+            print("Timpul maxim de gandire al PC-ului este ", max(timp_gandire_pc['2']))
+            print("Timpul mediu de gandire al PC-ului este ", statistics.mean(timp_gandire_pc['2']))
+            print("statistics.mediana timpului de gandire al PC-ului este ", statistics.median(timp_gandire_pc['2']))
+
+        if len(noduri_generate['1']):
+            print("Numarul minim de noduri generate la o mutare de PC-ului este ", min(noduri_generate['1']))
+            print("Numarul maxim de noduri generate la o mutare de PC-ului este ", max(noduri_generate['1']))
+            print("Numarul mediu de noduri generate la o mutare de PC-ului este ", statistics.mean(noduri_generate['1']))
+            print("statistics.mediana numarului de noduri generate la o mutare de PC-ului este ", statistics.median(noduri_generate['1']))
+
+        else:
+            print("Numarul minim de noduri generate la o mutare de PC-ului este ", min(noduri_generate['2']))
+            print("Numarul maxim de noduri generate la o mutare de PC-ului este ", max(noduri_generate['2']))
+            print("Numarul mediu de noduri generate la o mutare de PC-ului este ", statistics.mean(noduri_generate['2']))
+            print("statistics.mediana numarului de noduri generate la o mutare de PC-ului este ", statistics.median(noduri_generate['2']))
 
 def afis_daca_final(stare_curenta):
     final = stare_curenta.tabla_joc.final()
@@ -611,6 +675,8 @@ def afis_daca_final(stare_curenta):
         else:
             stare_curenta.tabla_joc.deseneaza_grid(castigator = final)
             print("A castigat "+final)
+
+        afisare_date_final()
 
         return True
 
@@ -860,6 +926,8 @@ def main():
                         pos = pygame.mouse.get_pos()  # coordonatele cursorului
                         tabla_curenta = stare_curenta.tabla_joc
 
+                        t_inainte = int(round(time.time() * 1000))
+
                         de_activat_bomba = False
                         for i in range(nl):
                             for j in range(nc):
@@ -912,13 +980,23 @@ def main():
                     activez_bomba = False
                     pun_bomba = False
                     pozitie_noua = (0, 0)
+
                     human_move = False
+                    mutari_jucator[Joc.jucator_opus(stare_curenta.j_curent)] += 1
+
+                    # preiau timpul in milisecunde de dupa mutare
+                    t_dupa = int(round(time.time() * 1000))
+                    print("Omul a \"gandit\" timp de " +
+                        str(t_dupa-t_inainte)+" milisecunde.")
         # --------------------------------
         else:  # jucatorul e JMAX (calculatorul)
             # Mutare calculator
             # preiau timpul in milisecunde de dinainte de mutare
+            global nr_noduri
 
             t_inainte = int(round(time.time() * 1000))
+            nr_noduri = 0
+
             if tip_algoritm == 'minimax':
                 stare_actualizata = min_max(stare_curenta)
             else:  # tip_algoritm=="alphabeta"
@@ -930,8 +1008,15 @@ def main():
 
             # preiau timpul in milisecunde de dupa mutare
             t_dupa = int(round(time.time() * 1000))
+            durata = t_dupa-t_inainte
+            timp_gandire_pc[Joc.jucator_opus(stare_curenta.j_curent)].append(durata)
             print("Calculatorul a \"gandit\" timp de " +
-                    str(t_dupa-t_inainte)+" milisecunde.")
+                    str(durata)+" milisecunde.")
+
+            print("S-au calculat", nr_noduri, "noduri la mutarea curenta")
+            print("Estimarea starii curente este", stare_actualizata.scor)
+
+            noduri_generate[Joc.jucator_opus(stare_curenta.j_curent)].append(nr_noduri)
 
             stare_curenta.tabla_joc.deseneaza_grid()
 
@@ -945,6 +1030,8 @@ def main():
 
             # S-a realizat o mutare. Schimb jucatorul cu cel opus
             stare_curenta.j_curent = Joc.jucator_opus(stare_curenta.j_curent)
+
+            mutari_jucator[Joc.jucator_opus(stare_curenta.j_curent)] += 1
 
             # schimb tipul de estimare pt urmatoarea mutare daca joaca PC vs PC
             if mod_joc == "PC vs PC":
