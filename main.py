@@ -526,6 +526,17 @@ class Stare:
         juc_opus = Joc.jucator_opus(self.j_curent)
         l_stari_mutari = [Stare(mutare, juc_opus, self.adancime-1, parinte=self) for mutare in l_mutari]
 
+        # daca nu am mutari valide pozitia e pierzatoare
+        if len(l_mutari) == 0:
+            self.tabla_joc.prot_jucatori[self.j_curent] = -10000
+            afis_daca_final(self)
+            while True:
+                for event in pygame.event.get():
+                    if event.type == pygame.QUIT:
+                        # iesim din program
+                        pygame.quit()
+                        sys.exit()
+
         return l_stari_mutari
 
     def __str__(self):
@@ -591,6 +602,8 @@ def alpha_beta(alpha, beta, stare):
                 alpha = stare_noua.scor
                 if alpha >= beta:
                     break
+        if stare.stare_aleasa is None:
+            stare.stare_aleasa = Stare(None, None, None, None, float('-inf'))
 
     elif stare.j_curent == Joc.JMIN:
         scor_curent = float('inf')
@@ -607,74 +620,90 @@ def alpha_beta(alpha, beta, stare):
                 beta = stare_noua.scor
                 if alpha >= beta:
                     break
+
+        if stare.stare_aleasa is None:
+            stare.stare_aleasa = Stare(None, None, None, None, float('inf'))
+
     stare.scor = stare.stare_aleasa.scor
 
     return stare
 
 def afisare_date_final():
-    print("Jucatorul 1 a facut", mutari_jucator['1'])
-    print("Jucatorul 2 a facut", mutari_jucator['2'])
+    print("\n")
+
+    print("Jucatorul 1 a facut", mutari_jucator['1'], "mutari")
+    print("Jucatorul 2 a facut", mutari_jucator['2'], "mutari")
 
     global timp_start
     global mod_joc
     timp_final = int(round(time.time() * 1000))
     print("Jocul a durat", timp_final-timp_start, "milisecunde")
 
+    print("\n")
+
     if mod_joc == "PC vs PC":
-        print("Timpul minim de gandire al PC-ului 1 este ", min(timp_gandire_pc['1']))
-        print("Timpul maxim de gandire al PC-ului 1 este ", max(timp_gandire_pc['1']))
-        print("Timpul mediu de gandire al PC-ului 1 este ", statistics.mean(timp_gandire_pc['1']))
-        print("statistics.mediana timpului de gandire al PC-ului 1 este ", statistics.median(timp_gandire_pc['1']))
+        print("Timpul minim de gandire al PC-ului 1 este ", min(timp_gandire_pc['1']), "milisecunde")
+        print("Timpul maxim de gandire al PC-ului 1 este ", max(timp_gandire_pc['1']), "milisecunde")
+        print("Timpul mediu de gandire al PC-ului 1 este ", statistics.mean(timp_gandire_pc['1']), "milisecunde")
+        print("Mediana timpului de gandire al PC-ului 1 este ", statistics.median(timp_gandire_pc['1']), "milisecunde")
 
-        print("Timpul minim de gandire al PC-ului 2 este ", min(timp_gandire_pc['2']))
-        print("Timpul maxim de gandire al PC-ului 2 este ", max(timp_gandire_pc['2']))
-        print("Timpul mediu de gandire al PC-ului 2 este ", statistics.mean(timp_gandire_pc['2']))
-        print("statistics.mediana timpului de gandire al PC-ului 2 este ", statistics.median(timp_gandire_pc['2']))
+        print("\n")
 
-        print("Numarul minim de noduri generate la o mutare de PC-ului 1 este ", min(noduri_generate['1']))
-        print("Numarul maxim de noduri generate la o mutare de PC-ului 1 este ", max(noduri_generate['1']))
-        print("Numarul mediu de noduri generate la o mutare de PC-ului 1 este ", statistics.mean(noduri_generate['1']))
-        print("statistics.mediana numarului de noduri generate la o mutare de PC-ului 1 este ", statistics.median(noduri_generate['1']))
+        print("Timpul minim de gandire al PC-ului 2 este ", min(timp_gandire_pc['2']), "milisecunde")
+        print("Timpul maxim de gandire al PC-ului 2 este ", max(timp_gandire_pc['2']), "milisecunde")
+        print("Timpul mediu de gandire al PC-ului 2 este ", statistics.mean(timp_gandire_pc['2']), "milisecunde")
+        print("Mediana timpului de gandire al PC-ului 2 este ", statistics.median(timp_gandire_pc['2']), "milisecunde")
 
-        print("Numarul minim de noduri generate la o mutare de PC-ului 2 este ", min(noduri_generate['2']))
-        print("Numarul maxim de noduri generate la o mutare de PC-ului 2 este ", max(noduri_generate['2']))
-        print("Numarul mediu de noduri generate la o mutare de PC-ului 2 este ", statistics.mean(noduri_generate['2']))
-        print("statistics.mediana numarului de noduri generate la o mutare de PC-ului 2 este ", statistics.median(noduri_generate['2']))
+        print("\n")
+
+        print("Numarul minim de noduri generate la o mutare de PC-ul 1 este ", min(noduri_generate['1']))
+        print("Numarul maxim de noduri generate la o mutare de PC-ul 1 este ", max(noduri_generate['1']))
+        print("Numarul mediu de noduri generate la o mutare de PC-ul 1 este ", statistics.mean(noduri_generate['1']))
+        print("Mediana numarului de noduri generate la o mutare de PC-ul 1 este ", statistics.median(noduri_generate['1']))
+
+        print("\n")
+
+        print("Numarul minim de noduri generate la o mutare de PC-ul 2 este ", min(noduri_generate['2']))
+        print("Numarul maxim de noduri generate la o mutare de PC-ul 2 este ", max(noduri_generate['2']))
+        print("Numarul mediu de noduri generate la o mutare de PC-ul 2 este ", statistics.mean(noduri_generate['2']))
+        print("Mediana numarului de noduri generate la o mutare de PC-ul 2 este ", statistics.median(noduri_generate['2']))
     
     elif mod_joc == "OM vs PC":
         if len(timp_gandire_pc['1']) > 0:
-            print("Timpul minim de gandire al PC-ului este ", min(timp_gandire_pc['1']))
-            print("Timpul maxim de gandire al PC-ului este ", max(timp_gandire_pc['1']))
-            print("Timpul mediu de gandire al PC-ului este ", statistics.mean(timp_gandire_pc['1']))
-            print("statistics.mediana timpului de gandire al PC-ului este ", statistics.median(timp_gandire_pc['1']))
+            print("Timpul minim de gandire al PC-ului este ", min(timp_gandire_pc['1']), "milisecunde")
+            print("Timpul maxim de gandire al PC-ului este ", max(timp_gandire_pc['1']), "milisecunde")
+            print("Timpul mediu de gandire al PC-ului este ", statistics.mean(timp_gandire_pc['1']), "milisecunde")
+            print("Mediana timpului de gandire al PC-ului este ", statistics.median(timp_gandire_pc['1']), "milisecunde")
 
-        else:
-            print("Timpul minim de gandire al PC-ului este ", min(timp_gandire_pc['2']))
-            print("Timpul maxim de gandire al PC-ului este ", max(timp_gandire_pc['2']))
-            print("Timpul mediu de gandire al PC-ului este ", statistics.mean(timp_gandire_pc['2']))
-            print("statistics.mediana timpului de gandire al PC-ului este ", statistics.median(timp_gandire_pc['2']))
+        elif len(timp_gandire_pc['2']) > 0:
+            print("Timpul minim de gandire al PC-ului este ", min(timp_gandire_pc['2']), "milisecunde")
+            print("Timpul maxim de gandire al PC-ului este ", max(timp_gandire_pc['2']), "milisecunde")
+            print("Timpul mediu de gandire al PC-ului este ", statistics.mean(timp_gandire_pc['2']), "milisecunde")
+            print("Mediana timpului de gandire al PC-ului este ", statistics.median(timp_gandire_pc['2']), "milisecunde")
+
+        print("\n")
 
         if len(noduri_generate['1']):
             print("Numarul minim de noduri generate la o mutare de PC-ului este ", min(noduri_generate['1']))
             print("Numarul maxim de noduri generate la o mutare de PC-ului este ", max(noduri_generate['1']))
             print("Numarul mediu de noduri generate la o mutare de PC-ului este ", statistics.mean(noduri_generate['1']))
-            print("statistics.mediana numarului de noduri generate la o mutare de PC-ului este ", statistics.median(noduri_generate['1']))
+            print("Mediana numarului de noduri generate la o mutare de PC-ului este ", statistics.median(noduri_generate['1']))
 
-        else:
-            print("Numarul minim de noduri generate la o mutare de PC-ului este ", min(noduri_generate['2']))
-            print("Numarul maxim de noduri generate la o mutare de PC-ului este ", max(noduri_generate['2']))
-            print("Numarul mediu de noduri generate la o mutare de PC-ului este ", statistics.mean(noduri_generate['2']))
-            print("statistics.mediana numarului de noduri generate la o mutare de PC-ului este ", statistics.median(noduri_generate['2']))
+        elif len(noduri_generate['2']):
+            print("Numarul minim de noduri generate la o mutare de PC-ul este ", min(noduri_generate['2']))
+            print("Numarul maxim de noduri generate la o mutare de PC-ul este ", max(noduri_generate['2']))
+            print("Numarul mediu de noduri generate la o mutare de PC-ul este ", statistics.mean(noduri_generate['2']))
+            print("Mediana numarului de noduri generate la o mutare de PC-ul este ", statistics.median(noduri_generate['2']))
 
 def afis_daca_final(stare_curenta):
     final = stare_curenta.tabla_joc.final()
     if(final):
         if (final == "remiza"):
             stare_curenta.tabla_joc.deseneaza_grid(remiza = True)
-            print("Remiza!")
+            print("\nRemiza!")
         else:
             stare_curenta.tabla_joc.deseneaza_grid(castigator = final)
-            print("A castigat "+final)
+            print("\nA castigat "+final)
 
         afisare_date_final()
 
@@ -866,6 +895,7 @@ def main():
     tabla_curenta = Joc(k, harta)
     global tip_estimare
     global ADANCIME_MAX
+    global mod_joc
     (Joc.JMIN, tip_algoritm, mod_joc, tip_estimare, dificultate) = deseneaza_alegeri(ecran, tabla_curenta)
 
     print("\n\n")
@@ -919,6 +949,7 @@ def main():
                 for event in pygame.event.get():
                     if event.type == pygame.QUIT:
                         # iesim din program
+                        afisare_date_final()
                         pygame.quit()
                         sys.exit()
 
