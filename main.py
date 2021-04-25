@@ -17,6 +17,8 @@ culori = {
 
 tip_estimare = 1
 
+human_move = False
+
 class Joc:
     """
     Clasa care defineste jocul. Se va schimba de la un joc la altul.
@@ -188,9 +190,14 @@ class Joc:
     def valid_mutare(self, jucator, pozitie_noua, pune_bomba, activeaza_bomba):
         # verifica daca mutarea este valida
 
+        global human_move
+
+        human_move = True
+
         # valid pe tabla
         if self.valid_pos(pozitie_noua[0], pozitie_noua[1]) == False:
-            print("\nPozitie proasta")
+            if human_move:
+                print("\nPozitie proasta")
             return False
 
         # se poate obtine din pozitia curenta
@@ -199,7 +206,8 @@ class Joc:
         disty = abs(pozitie_noua[1] - y)
 
         if distx + disty > 1:
-            print("\nPozitie nevecina")
+            if human_move:
+                print("\nPozitie nevecina")
             return False
 
         # vreau sa activez, dar nu este
@@ -208,12 +216,14 @@ class Joc:
 
         # punem fara sa activam
         if pune_bomba == 1 and activeaza_bomba == 0 and self.bomba_inactiva[jucator]:
-            print("\nTrebuia sa activam bomba")
+            if human_move:
+                print("\nTrebuia sa activam bomba")
             return False
 
         # nu punem, dar ar trebui
         if self.k_jucatori[jucator] + 1 == self.k and pune_bomba == 0:
-            print("\nTrebuia sa punem bomba")
+            if human_move:
+                print("\nTrebuia sa punem bomba")
             return False
 
     def muta(self, jucator, pozitie_noua, pune_bomba, activeaza_bomba):
@@ -378,7 +388,7 @@ class Joc:
         # functie pentru pentru
         if x < 0 or y < 0 or x >= self.NR_LINII or y >= self.NR_COLOANE:
             return False
-        if self.harta not in tip_campuri:
+        if self.harta[x][y] not in tip_campuri:
             return False
         if self.patrat_bombat(x, y):
             return False
@@ -395,7 +405,7 @@ class Joc:
         while len(q):
             (x, y, k) = q.pop(0)
             if self.corespunde(x, y, tip_campuri):
-                if (x, y) in campuri_de_numarat:
+                if self.harta[x][y] in campuri_de_numarat:
                     total += 1
 
                 if k == 0:
@@ -480,43 +490,44 @@ class Joc:
 
 
 class Stare:
-	"""
-	Clasa folosita de algoritmii minimax si alpha-beta
-	Are ca proprietate tabla de joc
-	Functioneaza cu conditia ca in cadrul clasei Joc sa fie definiti JMIN si JMAX (cei doi jucatori posibili)
-	De asemenea cere ca in clasa Joc sa fie definita si o metoda numita mutari() care ofera lista cu configuratiile posibile in urma mutarii unui jucator
-	"""
+    """
+    Clasa folosita de algoritmii minimax si alpha-beta
+    Are ca proprietate tabla de joc
+    Functioneaza cu conditia ca in cadrul clasei Joc sa fie definiti JMIN si JMAX (cei doi jucatori posibili)
+    De asemenea cere ca in clasa Joc sa fie definita si o metoda numita mutari() care ofera lista cu configuratiile posibile in urma mutarii unui jucator
+    """
 
-	def __init__(self, tabla_joc, j_curent, adancime, parinte=None, scor=None):
-		self.tabla_joc = tabla_joc
-		self.j_curent = j_curent
+    def __init__(self, tabla_joc, j_curent, adancime, parinte=None, scor=None):
+        self.tabla_joc = tabla_joc
+        self.j_curent = j_curent
 
-		# adancimea in arborele de stari
-		self.adancime = adancime
+        # adancimea in arborele de stari
+        self.adancime = adancime
 
         # scorul starii curente
-		self.scor = scor
+        self.scor = scor
 
-		# lista de mutari posibile din starea curenta
-		self.mutari_posibile = []
+        # lista de mutari posibile din starea curenta
+        self.mutari_posibile = []
 
-		# cea mai buna mutare din lista de mutari posibile pentru jucatorul curent
-		self.stare_aleasa = None
+        # cea mai buna mutare din lista de mutari posibile pentru jucatorul curent
+        self.stare_aleasa = None
 
-	def mutari(self):
-		l_mutari = self.tabla_joc.mutari(self.j_curent)
-		juc_opus = Joc.jucator_opus(self.j_curent)
-		l_stari_mutari = [Stare(mutare, juc_opus, self.adancime-1, parinte=self) for mutare in l_mutari]
+    def mutari(self):
+        l_mutari = self.tabla_joc.mutari(self.j_curent)
+        print(len(l_mutari))
+        juc_opus = Joc.jucator_opus(self.j_curent)
+        l_stari_mutari = [Stare(mutare, juc_opus, self.adancime-1, parinte=self) for mutare in l_mutari]
 
-		return l_stari_mutari
+        return l_stari_mutari
 
-	def __str__(self):
-		sir = str(self.tabla_joc) + "(Juc curent:"+self.j_curent+")\n"
-		return sir
+    def __str__(self):
+        sir = str(self.tabla_joc) + "(Juc curent:"+self.j_curent+")\n"
+        return sir
 
-	def __repr__(self):
-		sir = str(self.tabla_joc) + "(Juc curent:"+self.j_curent+")\n"
-		return sir
+    def __repr__(self):
+        sir = str(self.tabla_joc) + "(Juc curent:"+self.j_curent+")\n"
+        return sir
 
 
 """ Algoritmul MinMax """
@@ -530,7 +541,6 @@ def min_max(stare):
 
     # calculez toate mutarile posibile din starea curenta
     stare.mutari_posibile = stare.mutari()
-    print(type(stare.mutari_posibile[0]))
 
     # aplic algoritmul minimax pe toate mutarile posibile (calculand astfel subarborii lor)
     mutari_scor = [min_max(mutare) for mutare in stare.mutari_posibile]
@@ -751,6 +761,14 @@ def deseneaza_alegeri(display, tabla_curenta):
                                         return (btn_juc.getValoare(), btn_alg.getValoare(), btn_mod_joc.getValoare(), btn_estimare.getValoare(), btn_adancime.getValoare())
         pygame.display.update()
 
+def eval_conditie(mod_joc, stare_curenta):
+    # functie care determina cine este la mutare
+    if mod_joc == "OM vs OM":
+        return True
+    if mod_joc == "PC vs PC":
+        return False
+    return stare_curenta.j_curent == Joc.JMIN
+
 def main():
 	# setari interf grafica
     pygame.init()
@@ -827,7 +845,9 @@ def main():
     terminat_mutare = False
 
     while True:
-        if (stare_curenta.j_curent == Joc.JMIN): # e omul la mutare
+        if eval_conditie(mod_joc, stare_curenta): # e omul la mutare
+            global human_move
+            human_move = True
             terminat_mutare = False
             while terminat_mutare == False:
                 for event in pygame.event.get():
@@ -873,7 +893,8 @@ def main():
                             stare_curenta = Stare(tabla_noua, Joc.jucator_opus(stare_curenta.j_curent), ADANCIME_MAX)
 
                             tabla_noua.deseneaza_grid()
-                            print("Tabla noua")
+                            print("Muta jucatorul", Joc.jucator_opus(stare_curenta.j_curent))
+                            print("Tabla dupa mutarea omului")
                             print(str(tabla_noua))
 
                             terminat_mutare = True
@@ -891,10 +912,12 @@ def main():
                     activez_bomba = False
                     pun_bomba = False
                     pozitie_noua = (0, 0)
+                    human_move = False
         # --------------------------------
         else:  # jucatorul e JMAX (calculatorul)
             # Mutare calculator
             # preiau timpul in milisecunde de dinainte de mutare
+
             t_inainte = int(round(time.time() * 1000))
             if tip_algoritm == 'minimax':
                 stare_actualizata = min_max(stare_curenta)
@@ -902,6 +925,7 @@ def main():
                 stare_actualizata = alpha_beta(-500, 500, stare_curenta)
             stare_curenta.tabla_joc = stare_actualizata.stare_aleasa.tabla_joc
 
+            print("Muta jucatorul", Joc.jucator_opus(stare_curenta.j_curent))
             print("Tabla dupa mutarea calculatorului\n"+str(stare_curenta))
 
             # preiau timpul in milisecunde de dupa mutare
@@ -921,6 +945,10 @@ def main():
 
             # S-a realizat o mutare. Schimb jucatorul cu cel opus
             stare_curenta.j_curent = Joc.jucator_opus(stare_curenta.j_curent)
+
+            # schimb tipul de estimare pt urmatoarea mutare daca joaca PC vs PC
+            if mod_joc == "PC vs PC":
+                tip_estimare = 3 - tip_estimare
 
 
 if __name__ == "__main__":
